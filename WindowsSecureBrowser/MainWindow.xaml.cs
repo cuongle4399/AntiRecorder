@@ -1051,6 +1051,28 @@ namespace WindowsSecureBrowser
         public void ApplyWindowOpacity(double opacity)
         {
             this.Opacity = Math.Clamp(opacity, 0.15, 1.0);
+            try
+            {
+                IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+                    if (this.Opacity >= 0.98)
+                    {
+                        SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_LAYERED);
+                    }
+                    else
+                    {
+                        SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED);
+                        byte alpha = (byte)(this.Opacity * 255);
+                        SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyWindowOpacity error: {ex.Message}");
+            }
 
             if (!_isInitializingTheme)
             {
