@@ -100,7 +100,53 @@ namespace WindowsSecureBrowser
             UpdateMemoryDisplay();
         }
 
-        #region Window Event Handlers
+        #region Window Event Handlers & Resizing (WM_NCHITTEST)
+        private const int WM_NCHITTEST = 0x0084;
+        private const int HTLEFT = 10;
+        private const int HTRIGHT = 11;
+        private const int HTTOP = 12;
+        private const int HTTOPLEFT = 13;
+        private const int HTTOPRIGHT = 14;
+        private const int HTBOTTOM = 15;
+        private const int HTBOTTOMLEFT = 16;
+        private const int HTBOTTOMRIGHT = 17;
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            base.OnSourceInitialized(e);
+            var source = System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle);
+            source?.AddHook(WndProc);
+        }
+
+        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_NCHITTEST && WindowState != WindowState.Maximized)
+            {
+                int cornerSize = 10;
+                int borderSize = 6;
+
+                int x = (short)(lParam.ToInt32() & 0xFFFF);
+                int y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);
+
+                System.Windows.Point screenPoint = new System.Windows.Point(x, y);
+                System.Windows.Point windowPoint = PointFromScreen(screenPoint);
+
+                double width = ActualWidth;
+                double height = ActualHeight;
+
+                if (windowPoint.X <= cornerSize && windowPoint.Y <= cornerSize) { handled = true; return new IntPtr(HTTOPLEFT); }
+                if (windowPoint.X >= width - cornerSize && windowPoint.Y <= cornerSize) { handled = true; return new IntPtr(HTTOPRIGHT); }
+                if (windowPoint.X <= cornerSize && windowPoint.Y >= height - cornerSize) { handled = true; return new IntPtr(HTBOTTOMLEFT); }
+                if (windowPoint.X >= width - cornerSize && windowPoint.Y >= height - cornerSize) { handled = true; return new IntPtr(HTBOTTOMRIGHT); }
+
+                if (windowPoint.X <= borderSize) { handled = true; return new IntPtr(HTLEFT); }
+                if (windowPoint.X >= width - borderSize) { handled = true; return new IntPtr(HTRIGHT); }
+                if (windowPoint.Y <= borderSize) { handled = true; return new IntPtr(HTTOP); }
+                if (windowPoint.Y >= height - borderSize) { handled = true; return new IntPtr(HTBOTTOM); }
+            }
+            return IntPtr.Zero;
+        }
+
         private void Window_StateChanged(object sender, EventArgs e)
         {
         }
@@ -109,12 +155,27 @@ namespace WindowsSecureBrowser
         {
             if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
             {
-                this.DragMove();
+                if (e.ClickCount == 2)
+                {
+                    BtnMaximize_Click(sender, e);
+                }
+                else
+                {
+                    this.DragMove();
+                }
             }
         }
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
+            if (WindowState == WindowState.Maximized)
+            {
+                RootGrid.Margin = new Thickness(6);
+            }
+            else
+            {
+                RootGrid.Margin = new Thickness(0);
+            }
         }
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)

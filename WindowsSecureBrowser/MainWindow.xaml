@@ -8,6 +8,7 @@
         ShowInTaskbar="True"
         WindowStyle="None"
         AllowsTransparency="True"
+        ResizeMode="CanResizeWithGrip"
         Background="Transparent"
         Foreground="#F8FAFC"
         UseLayoutRounding="True"
