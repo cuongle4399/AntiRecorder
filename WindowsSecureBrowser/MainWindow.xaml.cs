@@ -943,6 +943,11 @@ namespace WindowsSecureBrowser
             {
                 System.Diagnostics.Debug.WriteLine($"ApplyWindowOpacity error: {ex.Message}");
             }
+
+            if (!_isInitializingTheme)
+            {
+                ApplyTheme(_appSettings?.ThemeMode ?? "Dark");
+            }
         }
 
         private void SldOpacity_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
@@ -974,6 +979,7 @@ namespace WindowsSecureBrowser
             try
             {
                 bool isLight = string.Equals(themeMode, "Light", StringComparison.OrdinalIgnoreCase);
+                bool isGlass = this.Opacity < 0.98;
 
                 if (rbDarkTheme != null && rbLightTheme != null)
                 {
@@ -981,8 +987,16 @@ namespace WindowsSecureBrowser
                     rbLightTheme.IsChecked = isLight;
                 }
 
-                var bgMain = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(241, 245, 249) : System.Windows.Media.Color.FromRgb(11, 15, 25));
-                var bgPanel = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(226, 232, 240) : System.Windows.Media.Color.FromRgb(21, 29, 42));
+                byte mainAlpha = isGlass ? (byte)130 : (byte)255;
+                byte panelAlpha = isGlass ? (byte)160 : (byte)255;
+
+                var bgMain = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromArgb(mainAlpha, 241, 245, 249)
+                            : System.Windows.Media.Color.FromArgb(mainAlpha, 11, 15, 25));
+
+                var bgPanel = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromArgb(panelAlpha, 226, 232, 240)
+                            : System.Windows.Media.Color.FromArgb(panelAlpha, 21, 29, 42));
                 var borderBrush = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225) : System.Windows.Media.Color.FromRgb(51, 65, 85));
                 var textPrimary = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42) : System.Windows.Media.Color.FromRgb(248, 250, 252));
 

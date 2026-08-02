@@ -10,6 +10,7 @@ namespace WindowsSecureBrowser.Browser
     {
         public async Task InitializeWebViewAsync(WebView2 webView, CoreWebView2Environment environment, string initialUrl, UserProfile? profile = null)
         {
+            webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
             await webView.EnsureCoreWebView2Async(environment);
             
             // Default configuration
