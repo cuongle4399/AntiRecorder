@@ -10,7 +10,7 @@ namespace WindowsSecureBrowser.AppSystem
         public string ThemeMode { get; set; } = "Dark";
         public double StartupWidth { get; set; } = 600;
         public double StartupHeight { get; set; } = 470;
-        public double ZoomFactor { get; set; } = 1.0;
+        public double ZoomFactor { get; set; } = 0.75;
         public bool IsAudioMuted { get; set; } = true;
     }
 
@@ -20,7 +20,7 @@ namespace WindowsSecureBrowser.AppSystem
         public string ThemeMode { get; set; } = "Dark";
         public double StartupWidth { get; set; } = 600;
         public double StartupHeight { get; set; } = 470;
-        public double ZoomFactor { get; set; } = 1.0;
+        public double ZoomFactor { get; set; } = 0.75;
         public bool IsAudioMuted { get; set; } = true;
 
         public void SaveConfig()
