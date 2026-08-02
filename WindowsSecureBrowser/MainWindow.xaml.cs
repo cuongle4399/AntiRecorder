@@ -1170,21 +1170,19 @@ namespace WindowsSecureBrowser
                 }
 
                 byte mainAlpha = isGlass ? (byte)60 : (byte)255;
-                byte panelAlpha = isGlass ? (byte)150 : (byte)255;
-                byte cardAlpha = isGlass ? (byte)170 : (byte)255;
-                byte barAlpha = isGlass ? (byte)90 : (byte)255;
+                byte barAlpha = isGlass ? (byte)120 : (byte)255;
 
                 var bgMain = new System.Windows.Media.SolidColorBrush(
                     isLight ? System.Windows.Media.Color.FromArgb(mainAlpha, 241, 245, 249)
                             : System.Windows.Media.Color.FromArgb(mainAlpha, 11, 15, 25));
 
                 var bgPanel = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromArgb(panelAlpha, 255, 255, 255)
-                            : System.Windows.Media.Color.FromArgb(panelAlpha, 21, 29, 42));
+                    isLight ? System.Windows.Media.Color.FromRgb(255, 255, 255)
+                            : System.Windows.Media.Color.FromRgb(21, 29, 42));
 
                 var bgCard = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromArgb(cardAlpha, 241, 245, 249)
-                            : System.Windows.Media.Color.FromArgb(cardAlpha, 30, 41, 59));
+                    isLight ? System.Windows.Media.Color.FromRgb(241, 245, 249)
+                            : System.Windows.Media.Color.FromRgb(30, 41, 59));
 
                 var bgBar = new System.Windows.Media.SolidColorBrush(
                     isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 226, 232, 240)
@@ -1195,8 +1193,8 @@ namespace WindowsSecureBrowser
                             : System.Windows.Media.Color.FromArgb(barAlpha, 21, 29, 42));
 
                 var btnBg = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromArgb(cardAlpha, 255, 255, 255)
-                            : System.Windows.Media.Color.FromArgb(cardAlpha, 30, 41, 59));
+                    isLight ? System.Windows.Media.Color.FromRgb(255, 255, 255)
+                            : System.Windows.Media.Color.FromRgb(30, 41, 59));
 
                 var btnFg = new System.Windows.Media.SolidColorBrush(
                     isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42)
