@@ -193,19 +193,18 @@ namespace WindowsSecureBrowser
 
             double w = e.NewSize.Width;
 
-            // 1. Responsive Toolbar Action Collapse
-            if (ToolbarActionsPanel != null && btnOverflowMenu != null)
+            // 1. Responsive Toolbar Action Collapse (Hide quick icons when narrow < 540px, keep ☰ Menu always visible)
+            if (QuickActionsPanel != null && btnOverflowMenu != null)
             {
-                if (w < 780)
+                if (w < 540)
                 {
-                    ToolbarActionsPanel.Visibility = Visibility.Collapsed;
+                    QuickActionsPanel.Visibility = Visibility.Collapsed;
                     btnOverflowMenu.Visibility = Visibility.Visible;
                 }
                 else
                 {
-                    ToolbarActionsPanel.Visibility = Visibility.Visible;
-                    btnOverflowMenu.Visibility = Visibility.Collapsed;
-                    if (OverflowMenuModal != null) OverflowMenuModal.Visibility = Visibility.Collapsed;
+                    QuickActionsPanel.Visibility = Visibility.Visible;
+                    btnOverflowMenu.Visibility = Visibility.Visible;
                 }
             }
 
