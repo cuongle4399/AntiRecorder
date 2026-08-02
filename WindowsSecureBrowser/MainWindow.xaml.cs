@@ -987,8 +987,9 @@ namespace WindowsSecureBrowser
                     rbLightTheme.IsChecked = isLight;
                 }
 
-                byte mainAlpha = isGlass ? (byte)130 : (byte)255;
-                byte panelAlpha = isGlass ? (byte)160 : (byte)255;
+                byte mainAlpha = isGlass ? (byte)60 : (byte)255;
+                byte panelAlpha = isGlass ? (byte)150 : (byte)255;
+                byte barAlpha = isGlass ? (byte)90 : (byte)255;
 
                 var bgMain = new System.Windows.Media.SolidColorBrush(
                     isLight ? System.Windows.Media.Color.FromArgb(mainAlpha, 241, 245, 249)
@@ -997,15 +998,29 @@ namespace WindowsSecureBrowser
                 var bgPanel = new System.Windows.Media.SolidColorBrush(
                     isLight ? System.Windows.Media.Color.FromArgb(panelAlpha, 226, 232, 240)
                             : System.Windows.Media.Color.FromArgb(panelAlpha, 21, 29, 42));
+
+                var bgBar = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 226, 232, 240)
+                            : System.Windows.Media.Color.FromArgb(barAlpha, 6, 10, 18));
+
+                var bgToolbar = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 241, 245, 249)
+                            : System.Windows.Media.Color.FromArgb(barAlpha, 21, 29, 42));
+
                 var borderBrush = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225) : System.Windows.Media.Color.FromRgb(51, 65, 85));
                 var textPrimary = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42) : System.Windows.Media.Color.FromRgb(248, 250, 252));
 
                 this.Foreground = textPrimary;
+                this.Background = isGlass ? System.Windows.Media.Brushes.Transparent : bgMain;
 
-                if (this.Content is Grid rootGrid)
+                if (RootGrid != null)
                 {
-                    rootGrid.Background = bgMain;
+                    RootGrid.Background = bgMain;
                 }
+
+                if (TabBarHeader != null) TabBarHeader.Background = bgBar;
+                if (AddressBarToolbar != null) AddressBarToolbar.Background = bgToolbar;
+                if (StatusBarBorder != null) StatusBarBorder.Background = bgBar;
 
                 Border[] modals = { SettingsModal, BookmarksModal, GoogleAccountModal, HelpModal, ScreenshotModal, NotificationModal };
                 foreach (var modal in modals)

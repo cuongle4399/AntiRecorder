@@ -70,7 +70,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid Background="#0B0F19">
+    <Grid x:Name="RootGrid" Background="#0B0F19">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Chrome Tab Bar -->
             <RowDefinition Height="Auto"/> <!-- Address Bar & Tools -->
@@ -79,7 +79,7 @@
         </Grid.RowDefinitions>
 
         <!-- 1. Chrome-Style Tab Bar Header -->
-        <Border Grid.Row="0" Background="#060A12" Padding="8,8,8,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" MouseDown="Window_MouseDown">
+        <Border x:Name="TabBarHeader" Grid.Row="0" Background="#060A12" Padding="8,8,8,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" MouseDown="Window_MouseDown">
             <DockPanel LastChildFill="True">
                 <!-- Right-side Actions: Google Account Badge -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,4,0" VerticalAlignment="Center">
@@ -108,7 +108,7 @@
         </Border>
 
         <!-- 2. Address & Navigation Toolbar with Monochrome Icons -->
-        <Border Grid.Row="1" Background="#151D2A" Padding="8,6" BorderBrush="#1E293B" BorderThickness="0,0,0,1">
+        <Border x:Name="AddressBarToolbar" Grid.Row="1" Background="#151D2A" Padding="8,6" BorderBrush="#1E293B" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/> <!-- Nav Controls -->
@@ -387,7 +387,7 @@
         </Border>
 
         <!-- 10. Status Bar -->
-        <Border Grid.Row="3" Background="#060A12" Padding="12,6" BorderBrush="#151D2A" BorderThickness="0,1,0,0">
+        <Border x:Name="StatusBarBorder" Grid.Row="3" Background="#060A12" Padding="12,6" BorderBrush="#151D2A" BorderThickness="0,1,0,0">
             <DockPanel>
                 <TextBlock x:Name="txtStatus" Text="Sẵn sàng (Nhấn F4 để Ẩn/Hiện trình duyệt)" Foreground="#94A3B8" FontSize="11"/>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
