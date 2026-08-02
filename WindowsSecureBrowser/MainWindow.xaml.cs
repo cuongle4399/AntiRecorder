@@ -87,6 +87,8 @@ namespace WindowsSecureBrowser
             _browserManager.TabManager.TabSelected += TabManager_TabSelected;
             _browserManager.TabManager.TabClosed += TabManager_TabClosed;
 
+            this.SizeChanged += (s, e) => UpdateTabHeaderWidths();
+
             // 5. Initialize Core WebView2 Environment for current profile
             await ReinitializeProfileEnvironmentAsync();
 
@@ -367,8 +369,8 @@ namespace WindowsSecureBrowser
                 Content = CreateTabHeaderContent(tab),
                 Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59)),
                 Foreground = System.Windows.Media.Brushes.White,
-                Margin = new Thickness(0, 0, 4, 0),
-                Padding = new Thickness(10, 0, 8, 0),
+                Margin = new Thickness(0, 0, 3, 0),
+                Padding = new Thickness(6, 0, 4, 0),
                 Height = 28,
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
                 VerticalContentAlignment = System.Windows.VerticalAlignment.Center,
@@ -428,34 +430,26 @@ namespace WindowsSecureBrowser
             UpdateAllTabStyles();
         }
 
-        private double GetTargetTabTitleWidth()
+        private double GetTargetTabWidth()
         {
-            double windowWidth = this.ActualWidth > 0 ? this.ActualWidth : 600;
+            double containerWidth = TabScrollViewer != null && TabScrollViewer.ActualWidth > 0 ? TabScrollViewer.ActualWidth : (this.ActualWidth - 160);
             int tabCount = TabContainer?.Children?.Count ?? 1;
             if (tabCount <= 0) tabCount = 1;
 
-            // Total available width for tabs (window width minus ~160px for controls & new tab button)
-            double availableSpace = Math.Max(80, windowWidth - 160);
-            double tabWidth = availableSpace / tabCount;
-            double titleWidth = Math.Clamp(tabWidth - 26, 20, 130);
-
-            return titleWidth;
+            double tabWidth = (containerWidth - (tabCount * 3)) / tabCount;
+            return Math.Clamp(tabWidth, 50, 160);
         }
 
         private void UpdateTabHeaderWidths()
         {
             if (TabContainer == null) return;
-            double titleWidth = GetTargetTabTitleWidth();
+            double targetTabWidth = GetTargetTabWidth();
 
             foreach (UIElement elem in TabContainer.Children)
             {
                 if (elem is System.Windows.Controls.Button btn)
                 {
-                    btn.MaxWidth = titleWidth + 30;
-                    if (btn.Content is Grid grid && grid.ColumnDefinitions.Count > 0)
-                    {
-                        grid.ColumnDefinitions[0].Width = new GridLength(titleWidth);
-                    }
+                    btn.Width = targetTabWidth;
                 }
             }
         }
@@ -464,9 +458,10 @@ namespace WindowsSecureBrowser
         {
             var grid = new Grid
             {
-                VerticalAlignment = System.Windows.VerticalAlignment.Center
+                VerticalAlignment = System.Windows.VerticalAlignment.Center,
+                HorizontalAlignment = System.Windows.HorizontalAlignment.Stretch
             };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(GetTargetTabTitleWidth()) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var txtTitle = new TextBlock
@@ -474,7 +469,8 @@ namespace WindowsSecureBrowser
                 Text = tab.Title,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                FontSize = 12
+                FontSize = 11,
+                Margin = new Thickness(0, 0, 2, 0)
             };
 
             var btnClose = new System.Windows.Controls.Button
@@ -483,11 +479,11 @@ namespace WindowsSecureBrowser
                 Background = System.Windows.Media.Brushes.Transparent,
                 Foreground = System.Windows.Media.Brushes.LightGray,
                 BorderThickness = new Thickness(0),
-                Margin = new Thickness(4, 0, 0, 0),
+                Margin = new Thickness(2, 0, 0, 0),
                 Padding = new Thickness(0),
-                Width = 20,
-                Height = 20,
-                FontSize = 11,
+                Width = 16,
+                Height = 16,
+                FontSize = 10,
                 FontWeight = FontWeights.Bold,
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
