@@ -1495,6 +1495,17 @@ namespace WindowsSecureBrowser
             BtnBookmark_Click(sender, e);
         }
 
+        private void BtnExtensionStoreFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            var active = _browserManager.TabManager.ActiveTab;
+            if (active != null)
+            {
+                _webViewManager.Navigate(active.WebView, "https://chromewebstore.google.com");
+            }
+            UpdateModalVisibilities();
+        }
+
         private void BtnScreenshotFromOverflow_Click(object sender, RoutedEventArgs e)
         {
             OverflowMenuModal.Visibility = Visibility.Collapsed;

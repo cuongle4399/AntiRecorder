@@ -28,13 +28,12 @@ namespace WindowsSecureBrowser.Browser
 
             string proxyArg = string.IsNullOrWhiteSpace(proxyServer) ? "" : $"--proxy-server=\"{proxyServer}\" ";
 
-            // HIGH PERFORMANCE & LOW RAM/CPU CHROMIUM ARGUMENTS
+            // HIGH PERFORMANCE & LOW RAM/CPU CHROMIUM ARGUMENTS WITH EXTENSIONS ENABLED
             options.AdditionalBrowserArguments = proxyArg +
                 "--disable-background-networking " +
                 "--disable-background-timer-throttling " +
                 "--disable-client-side-phishing-detection " +
                 "--disable-default-apps " +
-                "--disable-extensions " +
                 "--disable-hang-monitor " +
                 "--disable-popup-blocking " +
                 "--disable-prompt-on-repost " +

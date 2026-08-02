@@ -168,6 +168,7 @@
                 <StackPanel>
                     <TextBlock Text="☰ Menu Chức Năng" FontSize="13" FontWeight="Bold" Margin="4,2,4,8"/>
                     <Button Content="👤 Tài khoản &amp; Profile Google" Click="BtnGoogleAccountFromOverflow_Click" Margin="0,0,0,6" Padding="10,6" HorizontalContentAlignment="Left" FontWeight="Bold"/>
+                    <Button Content="🧩 Tiện ích &amp; Extension (Chrome Store)" Click="BtnExtensionStoreFromOverflow_Click" Margin="0,0,0,6" Padding="10,6" HorizontalContentAlignment="Left" FontWeight="Bold"/>
                     <Button Content="🌐 Cấu hình Proxy Tab" Click="BtnProxyFromOverflow_Click" Margin="0,0,0,6" Padding="10,6" HorizontalContentAlignment="Left" FontWeight="Bold"/>
                     <Button Content="★ Trang yêu thích" Click="BtnBookmarkFromOverflow_Click" Margin="0,0,0,6" Padding="10,6" HorizontalContentAlignment="Left"/>
                     <Button Content="📷 Chụp ảnh màn hình" Click="BtnScreenshotFromOverflow_Click" Margin="0,0,0,6" Padding="10,6" HorizontalContentAlignment="Left"/>
