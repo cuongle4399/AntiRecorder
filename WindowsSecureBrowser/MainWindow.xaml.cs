@@ -341,6 +341,7 @@ namespace WindowsSecureBrowser
 
             btnTab.Click += (s, e) => _browserManager.TabManager.SelectTab(tab);
             TabContainer.Children.Add(btnTab);
+            UpdateAllTabStyles();
         }
 
         private UIElement CreateTabHeaderContent(BrowserTab tab)
@@ -412,23 +413,72 @@ namespace WindowsSecureBrowser
             }
         }
 
-        private void TabManager_TabSelected(object? sender, BrowserTab tab)
+        private void UpdateAllTabStyles()
         {
-            WebViewHostGrid.Children.Clear();
-            WebViewHostGrid.Children.Add(tab.WebView);
-            txtAddressBar.Text = tab.Url;
+            bool isLight = string.Equals(_appSettings?.ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
+            var activeTab = _browserManager.TabManager.ActiveTab;
 
             foreach (UIElement elem in TabContainer.Children)
             {
                 if (elem is System.Windows.Controls.Button btn)
                 {
-                    bool isActive = (btn.Tag == tab);
-                    btn.Background = isActive ? 
-                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 51, 65, 85)) : 
-                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 15, 23, 42));
-                    btn.Foreground = System.Windows.Media.Brushes.White;
+                    bool isActive = (btn.Tag == activeTab);
+
+                    if (isLight)
+                    {
+                        btn.Background = isActive ?
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255)) :
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
+
+                        btn.Foreground = isActive ?
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42)) :
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
+
+                        btn.BorderBrush = isActive ?
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(14, 165, 233)) :
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
+                    }
+                    else
+                    {
+                        btn.Background = isActive ?
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(51, 65, 85)) :
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
+
+                        btn.Foreground = isActive ?
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)) :
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+
+                        btn.BorderBrush = isActive ?
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(56, 189, 248)) :
+                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
+                    }
+
+                    if (btn.Content is Grid grid)
+                    {
+                        foreach (var child in grid.Children)
+                        {
+                            if (child is TextBlock txtTitle)
+                            {
+                                txtTitle.Foreground = btn.Foreground;
+                            }
+                            else if (child is System.Windows.Controls.Button btnClose)
+                            {
+                                btnClose.Foreground = isLight ?
+                                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139)) :
+                                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+                            }
+                        }
+                    }
                 }
             }
+        }
+
+        private void TabManager_TabSelected(object? sender, BrowserTab tab)
+        {
+            WebViewHostGrid.Children.Clear();
+            WebViewHostGrid.Children.Add(tab.WebView);
+            txtAddressBar.Text = tab.Url;
+            UpdateAllTabStyles();
         }
 
         private void TabManager_TabClosed(object? sender, BrowserTab tab)
@@ -1194,6 +1244,8 @@ namespace WindowsSecureBrowser
 
                 if (rbDarkTheme != null) rbDarkTheme.Foreground = textPrimary;
                 if (rbLightTheme != null) rbLightTheme.Foreground = textPrimary;
+
+                UpdateAllTabStyles();
 
                 if (_browserManager?.TabManager?.Tabs != null)
                 {
