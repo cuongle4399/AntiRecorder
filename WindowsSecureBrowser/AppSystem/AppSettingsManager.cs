@@ -12,6 +12,7 @@ namespace WindowsSecureBrowser.AppSystem
         public double StartupHeight { get; set; } = 470;
         public double ZoomFactor { get; set; } = 0.75;
         public bool IsAudioMuted { get; set; } = true;
+        public bool IsAlwaysOnTop { get; set; } = true;
     }
 
     public class AppSettingsManager
@@ -22,6 +23,7 @@ namespace WindowsSecureBrowser.AppSystem
         public double StartupHeight { get; set; } = 470;
         public double ZoomFactor { get; set; } = 0.75;
         public bool IsAudioMuted { get; set; } = true;
+        public bool IsAlwaysOnTop { get; set; } = true;
 
         public void SaveConfig()
         {
@@ -34,7 +36,8 @@ namespace WindowsSecureBrowser.AppSystem
                     StartupWidth = this.StartupWidth,
                     StartupHeight = this.StartupHeight,
                     ZoomFactor = this.ZoomFactor,
-                    IsAudioMuted = this.IsAudioMuted
+                    IsAudioMuted = this.IsAudioMuted,
+                    IsAlwaysOnTop = this.IsAlwaysOnTop
                 };
                 string json = JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(AppDataPath.AppConfigFilePath, json);
@@ -77,6 +80,7 @@ namespace WindowsSecureBrowser.AppSystem
                             this.ZoomFactor = model.ZoomFactor;
                         }
                         this.IsAudioMuted = model.IsAudioMuted;
+                        this.IsAlwaysOnTop = model.IsAlwaysOnTop;
                     }
                 }
             }

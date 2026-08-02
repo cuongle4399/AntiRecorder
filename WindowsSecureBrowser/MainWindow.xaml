@@ -435,13 +435,16 @@
                         </DockPanel>
                     </Border>
 
-                    <!-- 3.5 Audio Mute Toggle (Default Muted = True) -->
+                    <!-- 3. Audio & Always-On-Top Settings -->
                     <Border BorderThickness="1" CornerRadius="6" Padding="8,6" Margin="0,0,0,8">
-                        <DockPanel>
+                        <StackPanel>
                             <CheckBox x:Name="chkMuteAudio" Content="🔇 Tắt âm thanh trang web (Mute)"
                                       IsChecked="True" Checked="ChkMuteAudio_Changed" Unchecked="ChkMuteAudio_Changed"
-                                      FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                        </DockPanel>
+                                      FontSize="11" FontWeight="SemiBold" Margin="0,0,0,4"/>
+                            <CheckBox x:Name="chkAlwaysOnTop" Content="📌 Luôn nổi trên cùng (Ghim màn hình khi focus app khác)"
+                                      IsChecked="True" Checked="ChkAlwaysOnTop_Changed" Unchecked="ChkAlwaysOnTop_Changed"
+                                      FontSize="11" FontWeight="SemiBold"/>
+                        </StackPanel>
                     </Border>
 
                     <!-- 4. Theme & Security Row -->

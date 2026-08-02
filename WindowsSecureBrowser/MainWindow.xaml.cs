@@ -55,6 +55,7 @@ namespace WindowsSecureBrowser
                 ApplyWindowOpacity(_appSettings.WindowOpacity);
             }
             ApplyTheme(_appSettings.ThemeMode);
+            this.Topmost = _appSettings.IsAlwaysOnTop;
 
             // 1. Initialize Tray Icon & Global Hotkeys
             _trayManager.Initialize(this);
@@ -1804,6 +1805,19 @@ namespace WindowsSecureBrowser
             }
         }
 
+        private void ChkAlwaysOnTop_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isInitializingTheme || chkAlwaysOnTop == null || _appSettings == null) return;
+            bool isAlwaysOnTop = chkAlwaysOnTop.IsChecked == true;
+            this.Topmost = isAlwaysOnTop;
+            _appSettings.IsAlwaysOnTop = isAlwaysOnTop;
+            if (txtSaveSettingsStatus != null)
+            {
+                txtSaveSettingsStatus.Text = "⏳ Chưa lưu";
+                txtSaveSettingsStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36));
+            }
+        }
+
         public void ApplyAudioMuteSetting(bool isMuted)
         {
             if (_browserManager?.TabManager?.Tabs != null)
@@ -1848,6 +1862,12 @@ namespace WindowsSecureBrowser
             {
                 _appSettings.IsAudioMuted = chkMuteAudio.IsChecked == true;
                 ApplyAudioMuteSetting(_appSettings.IsAudioMuted);
+            }
+
+            if (chkAlwaysOnTop != null)
+            {
+                _appSettings.IsAlwaysOnTop = chkAlwaysOnTop.IsChecked == true;
+                this.Topmost = _appSettings.IsAlwaysOnTop;
             }
 
             _appSettings.SaveConfig();
@@ -1904,6 +1924,7 @@ namespace WindowsSecureBrowser
                     _appSettings.ThemeMode = themeMode;
                     Border[] modals = { SettingsModal, BookmarksModal, DownloadsModal, ProxyModal, ExtensionsModal, GoogleAccountModal, HelpModal, ScreenshotModal, NotificationModal, OverflowMenuModal };
                     _themeManager.ApplyTheme(themeMode, _currentWindowOpacity, _browserManager, _appSettings, modals);
+                    if (chkAlwaysOnTop != null) chkAlwaysOnTop.IsChecked = _appSettings.IsAlwaysOnTop;
                 }
             }
             finally
