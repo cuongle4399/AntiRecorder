@@ -61,14 +61,17 @@ namespace WindowsSecureBrowser
 
             _hotkeyManager.RegisterGlobalHotkeys(this);
 
-            // 2. Enforce Continuous Protection Hook
+            // 2. Enforce Continuous Protection Hook & Stealth Cursor
             this.ShowInTaskbar = false;
             WindowProtection.CurrentMode = ProtectionMode.FullStealth;
             WindowProtection.RegisterContinuousProtectionHook(this);
             OSScreenshotDetector.Initialize(this);
-            Activated += (s, e) => { this.ShowInTaskbar = false; if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
-            StateChanged += (s, e) => { this.ShowInTaskbar = false; if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
-            IsVisibleChanged += (s, e) => { this.ShowInTaskbar = false; if (IsVisible && !WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+            Activated += (s, e) => { this.ShowInTaskbar = false; HideFromAltTab(); if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+            StateChanged += (s, e) => { this.ShowInTaskbar = false; HideFromAltTab(); if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+            IsVisibleChanged += (s, e) => { this.ShowInTaskbar = false; HideFromAltTab(); if (IsVisible && !WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+
+            MouseEnter += (s, e) => { System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow; };
+            MouseLeave += (s, e) => { System.Windows.Input.Mouse.OverrideCursor = null; };
 
             // Ensure window pops up front-and-center when app launches
             this.Show();
@@ -191,11 +194,34 @@ namespace WindowsSecureBrowser
             System.Runtime.InteropServices.Marshal.StructureToPtr(mmi, lParam, true);
         }
 
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
+        private const int WS_EX_APPWINDOW = 0x00040000;
+
+        private void HideFromAltTab()
+        {
+            try
+            {
+                IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+                if (hwnd != IntPtr.Zero)
+                {
+                    int exStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+                    exStyle |= WS_EX_TOOLWINDOW;  // Hide from Alt+Tab switcher & Win+Tab Task View!
+                    exStyle &= ~WS_EX_APPWINDOW; // Exclude from AppWindow list
+                    SetWindowLong(hwnd, GWL_EXSTYLE, exStyle);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"HideFromAltTab error: {ex.Message}");
+            }
+        }
+
         protected override void OnSourceInitialized(EventArgs e)
         {
             base.OnSourceInitialized(e);
             var source = System.Windows.Interop.HwndSource.FromHwnd(new System.Windows.Interop.WindowInteropHelper(this).Handle);
             source?.AddHook(WndProc);
+            HideFromAltTab();
         }
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
