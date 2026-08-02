@@ -62,13 +62,13 @@ namespace WindowsSecureBrowser
             _hotkeyManager.RegisterGlobalHotkeys(this);
 
             // 2. Enforce Continuous Protection Hook
-            this.ShowInTaskbar = true;
+            this.ShowInTaskbar = false;
             WindowProtection.CurrentMode = ProtectionMode.FullStealth;
             WindowProtection.RegisterContinuousProtectionHook(this);
             OSScreenshotDetector.Initialize(this);
-            Activated += (s, e) => { this.ShowInTaskbar = true; if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
-            StateChanged += (s, e) => { this.ShowInTaskbar = true; if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
-            IsVisibleChanged += (s, e) => { this.ShowInTaskbar = true; if (IsVisible && !WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+            Activated += (s, e) => { this.ShowInTaskbar = false; if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+            StateChanged += (s, e) => { this.ShowInTaskbar = false; if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+            IsVisibleChanged += (s, e) => { this.ShowInTaskbar = false; if (IsVisible && !WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
 
             // Ensure window pops up front-and-center when app launches
             this.Show();
@@ -209,7 +209,7 @@ namespace WindowsSecureBrowser
             }
         }
 
-        private void BtnDragWindow_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void BtnDragWindow_PreviewMouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
             {

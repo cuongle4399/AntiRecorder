@@ -67,7 +67,7 @@ namespace WindowsSecureBrowser.Tray
         {
             if (_mainWindow == null) return;
 
-            _mainWindow.ShowInTaskbar = true;
+            _mainWindow.ShowInTaskbar = false;
             _mainWindow.Show();
             _mainWindow.WindowState = WindowState.Normal;
             WindowProtection.EnableCaptureProtection(_mainWindow);

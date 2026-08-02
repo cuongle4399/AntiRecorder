@@ -5,7 +5,7 @@
         Title="AntiRecorder - Trình Duyệt Bảo Mật Riêng Tư" Height="470" Width="600"
         MinWidth="320" MinHeight="220"
         WindowStartupLocation="CenterScreen"
-        ShowInTaskbar="True"
+        ShowInTaskbar="False"
         WindowStyle="None"
         AllowsTransparency="True"
         ResizeMode="CanResizeWithGrip"
@@ -145,8 +145,14 @@
 
                 <!-- Action Tools (Drag Handle & Menu Button) -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
-                    <!-- Drag Move Handle Button -->
-                    <Button x:Name="btnDragWindow" Content="✥" MouseDown="BtnDragWindow_MouseDown" ToolTip="Nhấp và giữ để kéo di chuyển ứng dụng (Drag Window)" Width="32" Height="30" Margin="0,0,3,0" Padding="0" FontSize="14" FontWeight="Bold" Cursor="SizeAll"/>
+                    <!-- Drag Move Handle Control -->
+                    <Border x:Name="btnDragWindow" PreviewMouseLeftButtonDown="BtnDragWindow_PreviewMouseLeftButtonDown"
+                            ToolTip="Nhấp và giữ chuột trái để kéo di chuyển ứng dụng (Drag Window)"
+                            Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="4"
+                            Width="32" Height="30" Margin="0,0,3,0" Cursor="SizeAll">
+                        <TextBlock Text="✥" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
                     <!-- Menu Button -->
                     <Button x:Name="btnOverflowMenu" Content="☰" Click="BtnOverflowMenu_Click" ToolTip="Menu Chức Năng" Width="32" Height="30" Padding="0" FontSize="14" FontWeight="Bold"/>
                 </StackPanel>
