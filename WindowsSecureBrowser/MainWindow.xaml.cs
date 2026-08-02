@@ -1047,7 +1047,7 @@ namespace WindowsSecureBrowser
             _appSettings.SaveConfig();
         }
 
-        private void UpdateControlThemeRecursive(DependencyObject parent, System.Windows.Media.Brush fg, System.Windows.Media.Brush secondaryFg, System.Windows.Media.Brush cardBg, System.Windows.Media.Brush borderBrush)
+        private void UpdateControlThemeRecursive(DependencyObject parent, System.Windows.Media.Brush fg, System.Windows.Media.Brush secondaryFg, System.Windows.Media.Brush cardBg, System.Windows.Media.Brush btnBg, System.Windows.Media.Brush btnFg, System.Windows.Media.Brush borderBrush)
         {
             int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
             for (int i = 0; i < count; i++)
@@ -1062,15 +1062,22 @@ namespace WindowsSecureBrowser
                 {
                     rb.Foreground = fg;
                 }
-                else if (child is Border b && b.Name != "OuterWindowBorder")
+                else if (child is System.Windows.Controls.Button btn)
+                {
+                    btn.Background = btnBg;
+                    btn.Foreground = btnFg;
+                    btn.BorderBrush = borderBrush;
+                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, btnBg, btnFg, borderBrush);
+                }
+                else if (child is Border b && b.Name != "OuterWindowBorder" && b.Name != "GoogleAccountBadge")
                 {
                     b.Background = cardBg;
                     b.BorderBrush = borderBrush;
-                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, borderBrush);
+                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, btnBg, btnFg, borderBrush);
                 }
                 else
                 {
-                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, borderBrush);
+                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, btnBg, btnFg, borderBrush);
                 }
             }
         }
@@ -1115,6 +1122,14 @@ namespace WindowsSecureBrowser
                     isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 241, 245, 249)
                             : System.Windows.Media.Color.FromArgb(barAlpha, 21, 29, 42));
 
+                var btnBg = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromArgb(cardAlpha, 255, 255, 255)
+                            : System.Windows.Media.Color.FromArgb(cardAlpha, 30, 41, 59));
+
+                var btnFg = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42)
+                            : System.Windows.Media.Color.FromRgb(255, 255, 255));
+
                 var borderBrush = new System.Windows.Media.SolidColorBrush(
                     isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225)
                             : System.Windows.Media.Color.FromRgb(51, 65, 85));
@@ -1140,11 +1155,19 @@ namespace WindowsSecureBrowser
                 if (RootGrid != null)
                 {
                     RootGrid.Background = bgMain;
+                    UpdateControlThemeRecursive(RootGrid, textPrimary, textSecondary, bgCard, btnBg, btnFg, borderBrush);
                 }
 
                 if (TabBarHeader != null) TabBarHeader.Background = bgBar;
                 if (AddressBarToolbar != null) AddressBarToolbar.Background = bgToolbar;
                 if (StatusBarBorder != null) StatusBarBorder.Background = bgBar;
+
+                if (GoogleAccountBadge != null)
+                {
+                    GoogleAccountBadge.Background = btnBg;
+                    GoogleAccountBadge.BorderBrush = borderBrush;
+                }
+                if (txtProfileName != null) txtProfileName.Foreground = btnFg;
 
                 if (txtStatus != null) txtStatus.Foreground = textSecondary;
                 if (txtMemoryUsage != null) txtMemoryUsage.Foreground = textSecondary;
@@ -1165,7 +1188,7 @@ namespace WindowsSecureBrowser
                     {
                         modal.Background = bgPanel;
                         modal.BorderBrush = borderBrush;
-                        UpdateControlThemeRecursive(modal, textPrimary, textSecondary, bgCard, borderBrush);
+                        UpdateControlThemeRecursive(modal, textPrimary, textSecondary, bgCard, btnBg, btnFg, borderBrush);
                     }
                 }
 
