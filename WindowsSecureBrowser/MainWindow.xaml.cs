@@ -432,12 +432,14 @@ namespace WindowsSecureBrowser
 
         private double GetTargetTabWidth()
         {
-            double containerWidth = TabScrollViewer != null && TabScrollViewer.ActualWidth > 0 ? TabScrollViewer.ActualWidth : (this.ActualWidth - 160);
+            double windowWidth = this.ActualWidth > 0 ? this.ActualWidth : 600;
             int tabCount = TabContainer?.Children?.Count ?? 1;
             if (tabCount <= 0) tabCount = 1;
 
-            double tabWidth = (containerWidth - (tabCount * 3)) / tabCount;
-            return Math.Clamp(tabWidth, 50, 160);
+            // Available width for tab buttons (window width minus ~150px for window controls and + button)
+            double availableSpace = Math.Max(100, windowWidth - 150);
+            double calculatedWidth = (availableSpace - (tabCount * 3)) / tabCount;
+            return Math.Clamp(calculatedWidth, 55, 180);
         }
 
         private void UpdateTabHeaderWidths()

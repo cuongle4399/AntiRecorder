@@ -93,27 +93,28 @@
         <Border x:Name="TabBarHeader" Grid.Row="0" Background="#060A12" Padding="6,4,6,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" MouseDown="Window_MouseDown">
             <Grid x:Name="TabBarGrid">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>    <!-- Scrollable Tab Container -->
-                    <ColumnDefinition Width="Auto"/> <!-- New Tab (+) Button -->
+                    <ColumnDefinition Width="*"/>    <!-- Left-aligned Tab Strip + (+) Button -->
                     <ColumnDefinition Width="Auto"/> <!-- Window Controls (— ☐ ✕) -->
                 </Grid.ColumnDefinitions>
 
-                <!-- 1. Scrollable Chrome Tabs Strip -->
-                <ScrollViewer Grid.Column="0" x:Name="TabScrollViewer" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False">
-                    <StackPanel x:Name="TabContainer" Orientation="Horizontal" VerticalAlignment="Bottom">
-                        <!-- Dynamic Chrome Tabs rendered programmatically -->
-                    </StackPanel>
-                </ScrollViewer>
+                <!-- Left-side: Tabs + New Tab (+) Button -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <ScrollViewer x:Name="TabScrollViewer" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" VerticalAlignment="Bottom">
+                        <StackPanel x:Name="TabContainer" Orientation="Horizontal" VerticalAlignment="Bottom">
+                            <!-- Dynamic Chrome Tabs rendered programmatically -->
+                        </StackPanel>
+                    </ScrollViewer>
 
-                <!-- 2. Plus (+) New Tab Button (Fixed right beside tab strip) -->
-                <Button Grid.Column="1" x:Name="btnNewTab" Content="+" Width="28" Height="26" Margin="4,0,8,2"
-                        ToolTip="Mở Tab Mới (Ctrl+T)" Click="BtnNewTab_Click"
-                        Background="#151D2A" Foreground="#F8FAFC" BorderBrush="#334155" BorderThickness="1"
-                        FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
-                        VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0"/>
+                    <!-- Plus (+) New Tab Button ALWAYS sits immediately after the last tab -->
+                    <Button x:Name="btnNewTab" Content="+" Width="28" Height="26" Margin="4,0,8,2"
+                            ToolTip="Mở Tab Mới (Ctrl+T)" Click="BtnNewTab_Click"
+                            Background="#151D2A" Foreground="#F8FAFC" BorderBrush="#334155" BorderThickness="1"
+                            FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
+                            VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0"/>
+                </StackPanel>
 
-                <!-- 3. Right-side Actions: Window Controls -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,2,0" VerticalAlignment="Center">
+                <!-- Right-side: Window Controls -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,2,0" VerticalAlignment="Center">
                     <Button Content="—" Click="BtnMinimize_Click" Width="28" Height="24" Margin="0,0,3,0" Padding="0" FontSize="10" ToolTip="Thu nhỏ (Minimize)"/>
                     <Button Content="☐" Click="BtnMaximize_Click" Width="28" Height="24" Margin="0,0,3,0" Padding="0" FontSize="11" ToolTip="Phóng to / Phục hồi (Maximize)"/>
                     <Button Content="✕" Click="BtnCloseWindow_Click" Width="28" Height="24" Padding="0" FontSize="11" Background="#DC2626" Foreground="#FFFFFF" BorderBrush="#EF4444" ToolTip="Thoát ứng dụng (Close)"/>
@@ -122,12 +123,12 @@
         </Border>
 
         <!-- 2. Address & Navigation Toolbar with Monochrome Vector Icons -->
-        <Border x:Name="AddressBarToolbar" Grid.Row="1" Background="#151D2A" Padding="8,6" BorderBrush="#1E293B" BorderThickness="0,0,0,1">
+        <Border x:Name="AddressBarToolbar" Grid.Row="1" Background="#0F172A" Padding="6,4,6,4" BorderBrush="#1E293B" BorderThickness="0,0,0,1">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/> <!-- Nav Controls -->
                     <ColumnDefinition Width="*"/>    <!-- URL Box -->
-                    <ColumnDefinition Width="Auto"/> <!-- Action Tools -->
+                    <ColumnDefinition Width="Auto"/> <!-- Compact Action Tools -->
                 </Grid.ColumnDefinitions>
 
                 <!-- Nav Controls (Crisp Segoe MDL2 Vector Icons) -->
@@ -142,19 +143,14 @@
                 <TextBox x:Name="txtAddressBar" Grid.Column="1" Style="{StaticResource UrlBoxStyle}"
                          KeyDown="TxtAddressBar_KeyDown" Text="https://www.google.com"/>
 
-                <!-- Action Tools (Monochrome Vector Icons) -->
-                <StackPanel Grid.Column="2" x:Name="ToolbarActionsPanel" Orientation="Horizontal" Margin="4,0,0,0">
-                    <Button Content="★ Trang yêu thích" Click="BtnBookmark_Click" ToolTip="Quản lý Trang yêu thích (Bookmarks)" Margin="0,0,4,0" Padding="8,4"/>
-                    <Button Content="📷 Chụp ảnh" Click="BtnScreenshot_Click" ToolTip="Chụp ảnh màn hình (Ctrl+Shift+S)" Margin="0,0,4,0" Padding="8,4"/>
-                    <Button Content="⬇ Tải xuống" Click="BtnDownloads_Click" ToolTip="Danh sách Tải xuống" Margin="0,0,4,0" Padding="8,4"/>
-                    <Button Content="⚙ Cài đặt" Click="BtnSettings_Click" ToolTip="Cài đặt Ứng dụng &amp; Độ trong suốt" Margin="0,0,4,0" Padding="8,4"/>
-                    <Button Content="? Hướng dẫn" Click="BtnHelp_Click" ToolTip="Hướng dẫn sử dụng &amp; Phím tắt" FontWeight="Bold" Padding="8,4"/>
+                <!-- Action Tools (Compact Icon Buttons) -->
+                <StackPanel Grid.Column="2" x:Name="ToolbarActionsPanel" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
+                    <Button Content="★" Click="BtnBookmark_Click" ToolTip="Quản lý Trang yêu thích (Bookmarks)" Width="30" Height="30" Margin="0,0,3,0" FontSize="13" Padding="0"/>
+                    <Button Content="📷" Click="BtnScreenshot_Click" ToolTip="Chụp ảnh màn hình (Ctrl+Shift+S)" Width="30" Height="30" Margin="0,0,3,0" FontSize="12" Padding="0"/>
+                    <Button Content="⬇" Click="BtnDownloads_Click" ToolTip="Danh sách Tải xuống" Width="30" Height="30" Margin="0,0,3,0" FontSize="12" Padding="0"/>
+                    <Button Content="⚙" Click="BtnSettings_Click" ToolTip="Cài đặt Ứng dụng &amp; Độ trong suốt" Width="30" Height="30" Margin="0,0,3,0" FontSize="12" Padding="0"/>
+                    <Button x:Name="btnOverflowMenu" Content="☰" Click="BtnOverflowMenu_Click" ToolTip="Menu Chức Năng" Width="32" Height="30" Padding="0" FontSize="14" FontWeight="Bold"/>
                 </StackPanel>
-
-                <!-- Responsive Overflow Menu Button (Visible when window width < 780px) -->
-                <Button x:Name="btnOverflowMenu" Grid.Column="2" Content="☰ Menu" Click="BtnOverflowMenu_Click"
-                        Visibility="Collapsed" Margin="4,0,0,0" Padding="10,4" FontWeight="Bold"/>
-
             </Grid>
         </Border>
 
