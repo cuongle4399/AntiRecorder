@@ -1,0 +1,400 @@
+<Window x:Class="WindowsSecureBrowser.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+        Title="AntiRecorder - Trình Duyệt Bảo Mật Riêng Tư" Height="820" Width="1300"
+        MinWidth="980" MinHeight="650"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
+        Background="#0B0F19"
+        Foreground="#F8FAFC"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        StateChanged="Window_StateChanged"
+        SizeChanged="Window_SizeChanged">
+
+    <Window.Resources>
+        <Style TargetType="TextBox" x:Key="UrlBoxStyle">
+            <Setter Property="Background" Value="#0B0F19"/>
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="12,6"/>
+            <Setter Property="Height" Value="32"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="#1E293B"/>
+            <Setter Property="Foreground" Value="#F8FAFC"/>
+            <Setter Property="BorderBrush" Value="#334155"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="10,5"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="border"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter x:Name="contentPresenter"
+                                              Focusable="False"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              Margin="{TemplateBinding Padding}"
+                                              RecognizesAccessKey="True"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#334155"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#475569"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="border" Property="Background" Value="#0F172A"/>
+                                <Setter TargetName="border" Property="BorderBrush" Value="#38BDF8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="#0B0F19">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/> <!-- Chrome Tab Bar -->
+            <RowDefinition Height="Auto"/> <!-- Address Bar & Tools -->
+            <RowDefinition Height="*"/>    <!-- WebView Host / Content -->
+            <RowDefinition Height="Auto"/> <!-- Status Bar -->
+        </Grid.RowDefinitions>
+
+        <!-- 1. Chrome-Style Tab Bar Header -->
+        <Border Grid.Row="0" Background="#060A12" Padding="8,8,8,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" MouseDown="Window_MouseDown">
+            <DockPanel LastChildFill="True">
+                <!-- Right-side Actions: Google Account Badge -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,4,0" VerticalAlignment="Center">
+                    <!-- Google Account Profile Button -->
+                    <Border x:Name="GoogleAccountBadge" Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="14" Padding="12,4" Margin="0,0,4,0" Cursor="Hand" MouseDown="GoogleAccountBadge_MouseDown" ToolTip="Quản lý Tài khoản Google &amp; Đồng bộ">
+                        <TextBlock x:Name="txtProfileName" Text="Tài khoản Google" Foreground="#F8FAFC" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </Border>
+                </StackPanel>
+
+                <!-- Chrome Tab Strip Container with Plus (+) Button -->
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                        <StackPanel x:Name="TabContainer" Orientation="Horizontal">
+                            <!-- Dynamic Chrome Tabs rendered programmatically -->
+                        </StackPanel>
+                    </ScrollViewer>
+                    <!-- Plus (+) New Tab Button -->
+                    <Button x:Name="btnNewTab" Content="+" Width="30" Height="28" Margin="4,0,0,2"
+                            ToolTip="Mở Tab Mới (Ctrl+T)" Click="BtnNewTab_Click"
+                            Background="#151D2A" Foreground="#F8FAFC" BorderBrush="#334155" BorderThickness="1"
+                            FontSize="16" FontWeight="Bold"
+                            VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0"/>
+
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 2. Address & Navigation Toolbar with Monochrome Icons -->
+        <Border Grid.Row="1" Background="#151D2A" Padding="8,6" BorderBrush="#1E293B" BorderThickness="0,0,0,1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/> <!-- Nav Controls -->
+                    <ColumnDefinition Width="*"/>    <!-- URL Box -->
+                    <ColumnDefinition Width="Auto"/> <!-- Action Tools -->
+                </Grid.ColumnDefinitions>
+
+                <!-- Nav Controls (Monochrome Vector Icons) -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Content="◄" Click="BtnBack_Click" ToolTip="Quay lại (Back)" Width="34" Margin="0,0,4,0" FontSize="13"/>
+                    <Button Content="►" Click="BtnForward_Click" ToolTip="Tiến tới (Forward)" Width="34" Margin="0,0,4,0" FontSize="13"/>
+                    <Button Content="↻" Click="BtnRefresh_Click" ToolTip="Tải lại trang (Refresh)" Width="34" Margin="0,0,4,0" FontSize="14" FontWeight="Bold"/>
+                    <Button Content="⌂" Click="BtnHome_Click" ToolTip="Trang chủ Google (Home)" Width="34" Margin="0,0,8,0" FontSize="15"/>
+                </StackPanel>
+
+                <!-- URL Address Box -->
+                <TextBox x:Name="txtAddressBar" Grid.Column="1" Style="{StaticResource UrlBoxStyle}"
+                         KeyDown="TxtAddressBar_KeyDown" Text="https://www.google.com"/>
+
+                <!-- Action Tools (Monochrome Vector Icons) -->
+                <ScrollViewer Grid.Column="2" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False" Margin="4,0,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="★ Trang yêu thích" Click="BtnBookmark_Click" ToolTip="Quản lý Trang yêu thích (Bookmarks)" Margin="0,0,4,0" Padding="8,4"/>
+                        <Button Content="📷 Chụp ảnh" Click="BtnScreenshot_Click" ToolTip="Chụp ảnh màn hình (Ctrl+Shift+S)" Margin="0,0,4,0" Padding="8,4"/>
+                        <Button Content="⬇ Tải xuống" Click="BtnDownloads_Click" ToolTip="Danh sách Tải xuống" Margin="0,0,4,0" Padding="8,4"/>
+                        <Button Content="⚙ Cài đặt" Click="BtnSettings_Click" ToolTip="Cài đặt Ứng dụng &amp; Độ trong suốt" Margin="0,0,4,0" Padding="8,4"/>
+                        <Button Content="? Hướng dẫn" Click="BtnHelp_Click" ToolTip="Hướng dẫn sử dụng &amp; Phím tắt" FontWeight="Bold" Padding="8,4"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+            </Grid>
+        </Border>
+        <!-- 3. WebView Content Container -->
+        <Grid Grid.Row="2" x:Name="WebViewHostGrid">
+            <!-- Active WebView2 instance will be docked here -->
+        </Grid>
+
+        <!-- 4. Screenshot Options Modal -->
+        <Border Grid.Row="2" x:Name="ScreenshotModal" Visibility="Collapsed"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Width="580"
+                Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="10" Padding="24" Canvas.ZIndex="98">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,16">
+                    <Button Content="Đóng" DockPanel.Dock="Right" Click="BtnCloseScreenshotModal_Click" Padding="14,6"/>
+                    <TextBlock Text="📷 Tùy Chọn Chụp Ảnh Màn Hình" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <TextBlock Text="Chọn chế độ chụp ảnh (Ảnh lưu an toàn trên RAM &amp; Tự động copy để Ctrl+V dán ngay):"
+                           Foreground="#CBD5E1" FontSize="13" Margin="0,0,0,18" TextWrapping="Wrap"/>
+
+                <Button Click="BtnCropScreenshot_Click" Margin="0,0,0,12" Padding="16,12" MinHeight="54"
+                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                        Background="#1E293B" Foreground="#F8FAFC" BorderBrush="#475569" BorderThickness="1">
+                    <TextBlock Text="✂ Chụp Cắt Vùng Màn Hình (Kéo Thả Chuột Chọn Vùng)" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" TextWrapping="Wrap" TextAlignment="Center"/>
+                </Button>
+
+                <Button Click="BtnFullScreenScreenshot_Click" Padding="16,12" MinHeight="54"
+                        HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+                        Background="#1E293B" Foreground="#F8FAFC" BorderBrush="#475569" BorderThickness="1">
+                    <TextBlock Text="🖥 Chụp Toàn Bộ Màn Hình Tức Thì" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" TextWrapping="Wrap" TextAlignment="Center"/>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- 5. Bookmarks Manager Modal -->
+        <Border Grid.Row="2" x:Name="BookmarksModal" Visibility="Collapsed"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" MaxHeight="550"
+                Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="22" Canvas.ZIndex="99">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                    <Button Content="Đóng" DockPanel.Dock="Right" Click="BtnCloseBookmarksModal_Click" Padding="14,6"/>
+                    <TextBlock Text="★ Quản Lý Trang Yêu Thích" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <Button Grid.Row="1" Content="+ Lưu Trang Hiện Tại Vào Trang Yêu Thích" Click="BtnAddCurrentBookmark_Click"
+                        FontSize="13" FontWeight="Bold" Padding="14,8" MinHeight="36" Margin="0,0,0,14"
+                        Background="#1E293B" Foreground="#38BDF8" BorderBrush="#38BDF8" BorderThickness="1"/>
+
+                <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" MaxHeight="400">
+                    <StackPanel x:Name="BookmarksListContainer">
+                        <!-- Dynamic Bookmarks list -->
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- 6. Google Account & Profile Manager Modal -->
+        <Border Grid.Row="2" x:Name="GoogleAccountModal" Visibility="Collapsed"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Width="480"
+                Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="22" Canvas.ZIndex="100">
+            <StackPanel>
+                <DockPanel Margin="0,0,0,16">
+                    <Button Content="Đóng" DockPanel.Dock="Right" Click="BtnCloseGoogleAccountModal_Click"/>
+                    <TextBlock Text="Quản Lý Tài Khoản Google &amp; Đồng Bộ" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <TextBlock Text="Đăng nhập &amp; Truy cập nhanh Dịch vụ AI &amp; Google:" Foreground="#CBD5E1" FontSize="12" FontWeight="Bold" Margin="0,0,0,8"/>
+                <Grid Margin="0,0,0,14">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="Google" Click="BtnGoogleSignIn_Click" Margin="0,0,3,0" ToolTip="Đăng nhập Tài Khoản Google"/>
+                    <Button Grid.Column="1" Content="ChatGPT" Click="BtnOpenChatGPT_Click" Margin="3,0,3,0" ToolTip="Mở ChatGPT (https://chatgpt.com/)"/>
+                    <Button Grid.Column="2" Content="Gemini" Click="BtnOpenGemini_Click" Margin="3,0,0,0" ToolTip="Mở Google Gemini (https://gemini.google.com/app)"/>
+                </Grid>
+
+
+                <TextBlock Text="Chế độ Profile:" Foreground="#CBD5E1" FontSize="12" FontWeight="Bold" Margin="0,4,0,8"/>
+                <Grid Margin="0,0,0,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <Button Grid.Column="0" Content="Profile Cá nhân" Click="BtnPersonalProfile_Click" Margin="0,0,4,0"/>
+                    <Button Grid.Column="1" Content="Profile Khách" Click="BtnGuestProfile_Click" Margin="4,0,0,0"/>
+                </Grid>
+
+                <Button Content="Xóa Cookie &amp; Bộ nhớ đệm Google" Click="BtnClearGoogleCache_Click"
+                        FontSize="12" Padding="12,6"/>
+            </StackPanel>
+        </Border>
+
+
+
+
+
+        <!-- 8. User Guide & Help Modal -->
+        <Border Grid.Row="2" x:Name="HelpModal" Visibility="Collapsed"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" MaxHeight="560"
+                Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="22" Canvas.ZIndex="102">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                    <Button Content="Đóng" DockPanel.Dock="Right" Click="BtnCloseHelpModal_Click"/>
+                    <TextBlock Text="📖 Hướng Dẫn Sử Dụng &amp; Phím Tắt" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock Text="⚡ Danh Sách Phím Tắt Toàn Hệ Thống:" Foreground="#F8FAFC" FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Border Background="#0B0F19" CornerRadius="6" Padding="12" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="• F4 : Ẩn / Hiện nhanh trình duyệt xuống System Tray (Không làm mất trang)." Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,4"/>
+                                <TextBlock Text="• Ctrl + Shift + Space : Mở lại trình duyệt từ khay hệ thống." Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,4"/>
+                                <TextBlock Text="• Ctrl + Shift + S : Mở bảng tùy chọn Chụp ảnh màn hình riêng tư." Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,4"/>
+                                <TextBlock Text="• Ctrl + T : Tạo Tab mới." Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,4"/>
+                                <TextBlock Text="• Ctrl + W : Đóng Tab hiện tại." Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,4"/>
+                                <TextBlock Text="• Ctrl + Tab : Chuyển sang Tab kế tiếp." Foreground="#CBD5E1" FontSize="12"/>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="🛡 Tính Năng Bảo Mật Riêng Tư:" Foreground="#F8FAFC" FontSize="13" FontWeight="Bold" Margin="0,0,0,8"/>
+                        <Border Background="#0B0F19" CornerRadius="6" Padding="12" Margin="0,0,0,14" BorderBrush="#334155" BorderThickness="1">
+                            <StackPanel>
+                                <TextBlock Text="• Tàng hình Chống Quay Màn Hình: Cửa sổ trình duyệt tự động đứng hình/che đen trước phần mềm quay lén bên ngoài." Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                <TextBlock Text="• Bảo mật Âm thanh Mặc định (Default Mute): Tắt toàn bộ tiếng của tất cả các trang web để đảm bảo riêng tư." Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,4" TextWrapping="Wrap"/>
+                                <TextBlock Text="• Chụp ảnh chỉ lưu RAM: Ảnh chụp giữ trên RAM, quét chữ OCR tự động và hỗ trợ Ctrl+V dán ngay." Foreground="#CBD5E1" FontSize="12" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+
+
+
+        <!-- 9. In-App Stealth Notification Overlay Modal -->
+        <Border Grid.Row="2" x:Name="NotificationModal" Visibility="Collapsed"
+
+                HorizontalAlignment="Center" VerticalAlignment="Center" Width="440"
+                Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="22" Canvas.ZIndex="103">
+            <StackPanel>
+                <TextBlock x:Name="txtNotificationTitle" Text="Thông báo" FontSize="15" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,10"/>
+                <TextBlock x:Name="txtNotificationMessage" Text="Nội dung thông báo..." FontSize="13" Foreground="#CBD5E1" TextWrapping="Wrap" Margin="0,0,0,22"/>
+                <Grid x:Name="NotificationButtonsGrid">
+                    <Button x:Name="btnNotificationOk" Content="Đồng ý" Click="BtnNotificationOk_Click"
+                            FontSize="13" FontWeight="Bold" Padding="18,6" HorizontalAlignment="Right"/>
+                    <StackPanel x:Name="NotificationConfirmButtons" Orientation="Horizontal" HorizontalAlignment="Right" Visibility="Collapsed">
+                        <Button Content="Hủy" Click="BtnNotificationCancel_Click" FontSize="13" Padding="16,6" Margin="0,0,10,0"/>
+                        <Button Content="Xác nhận" Click="BtnNotificationConfirm_Click" FontSize="13" FontWeight="Bold" Padding="16,6"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- 9. App Settings & Opacity Configuration Modal -->
+        <Border Grid.Row="2" x:Name="SettingsModal" Visibility="Collapsed"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Width="540" MaxHeight="600"
+                Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="10" Padding="22" Canvas.ZIndex="102">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Modal Header -->
+                <DockPanel Grid.Row="0" Margin="0,0,0,16">
+                    <Button Content="Đóng" DockPanel.Dock="Right" Click="BtnCloseSettingsModal_Click" Padding="14,6"/>
+                    <TextBlock Text="⚙ Cài Đặt Ứng Dụng &amp; Giao Diện" FontSize="16" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <!-- Scrollable Body -->
+                <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <!-- Section 1: Window Opacity / Transparency Adjustment -->
+                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,10">
+                                    <TextBlock x:Name="txtOpacityPercent" Text="100% (Không Trong Suốt)" DockPanel.Dock="Right" FontSize="14" FontWeight="Bold" Foreground="#38BDF8"/>
+                                    <TextBlock Text="👁️ Độ Trong Suốt Giao Diện (Transparent)" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
+                                </DockPanel>
+
+                                <TextBlock Text="Kéo thanh trượt để chỉnh độ trong suốt (Alpha/Transparent) toàn bộ phần mềm từ 20% đến 100% để nhìn xuyên thấu màn hình bên dưới:"
+                                           Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+                                <Slider x:Name="sldOpacity" Minimum="0.2" Maximum="1.0" Value="1.0"
+                                        SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                                        ValueChanged="SldOpacity_ValueChanged" Margin="0,0,0,4"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Section 2: Theme Mode Selector (Dark / Light) -->
+                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,16">
+                            <StackPanel>
+                                <TextBlock Text="🎨 Chủ Đề Giao Diện (Theme Mode)" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,8"/>
+                                <TextBlock Text="Tùy chọn tông màu hiển thị cho toàn bộ giao diện phần mềm (Dark Mode / Light Mode):"
+                                           Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <RadioButton x:Name="rbDarkTheme" Grid.Column="0" Content="🌙 Chế độ Tối (Dark Mode)"
+                                                 IsChecked="True" Checked="RbTheme_Checked"
+                                                 FontSize="13" FontWeight="Bold" Margin="0,0,8,0"/>
+
+                                    <RadioButton x:Name="rbLightTheme" Grid.Column="1" Content="☀️ Chế độ Sáng (Light Mode)"
+                                                 Checked="RbTheme_Checked"
+                                                 FontSize="13" FontWeight="Bold"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Section 3: Security & RAM Cleanup -->
+                        <Border Background="#1E293B" BorderBrush="#334155" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,8">
+                            <StackPanel>
+                                <TextBlock Text="🛡️ Dọn Dẹp Bộ Nhớ RAM &amp; Cache Bảo Mật" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" Margin="0,0,0,8"/>
+                                <TextBlock Text="Giải phóng ngay lập tức toàn bộ bộ nhớ tạm RAM, các snapshot ảnh trong bộ nhớ và xoá sạch cache trình duyệt nhạy cảm."
+                                           Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                                <Button Click="BtnDoCleanup_Click" Content="🛡 Thực Hiện Dọn Dẹp Ngay"
+                                        FontSize="13" FontWeight="Bold" Padding="16,10" MinHeight="40"
+                                        Background="#0F172A" Foreground="#4ADE80" BorderBrush="#22C55E" BorderThickness="1"/>
+
+                                <TextBlock x:Name="txtCleanupStatus" Text="" Foreground="#4ADE80" FontSize="12" Margin="0,8,0,0" HorizontalAlignment="Center" TextWrapping="Wrap"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+        </Border>
+
+        <!-- 10. Status Bar -->
+        <Border Grid.Row="3" Background="#060A12" Padding="12,6" BorderBrush="#151D2A" BorderThickness="0,1,0,0">
+            <DockPanel>
+                <TextBlock x:Name="txtStatus" Text="Sẵn sàng (Nhấn F4 để Ẩn/Hiện trình duyệt)" Foreground="#94A3B8" FontSize="11"/>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock Text="Code by CL" Foreground="#38BDF8" FontSize="11" FontWeight="SemiBold" Margin="0,0,16,0" Opacity="0.85" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="txtMemoryUsage" Text="RAM: -- MB" Foreground="#94A3B8" FontSize="11" VerticalAlignment="Center"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

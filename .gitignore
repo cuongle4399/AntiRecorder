@@ -1,0 +1,29 @@
+# Visual Studio / .NET
+*.user
+*.userosscache
+*.sln.docstates
+*.suo
+[Bb]in/
+[Oo]bj/
+.vs/
+.vscode/
+*.pdb
+PublishOutputs.*.txt
+
+# Windows OS / IDE
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+
+# Agent temporary files
+.gemini/
+scratch/
+
+# Build Output & Local Data
+[Bb]uildOutput/
+[Dd]ata/
