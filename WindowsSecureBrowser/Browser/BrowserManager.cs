@@ -27,9 +27,10 @@ namespace WindowsSecureBrowser.Browser
             var options = new CoreWebView2EnvironmentOptions();
 
             string proxyArg = string.IsNullOrWhiteSpace(proxyServer) ? "" : $"--proxy-server=\"{proxyServer}\" ";
+            string extArg = ExtensionManager.GetLoadExtensionArgument(userDataFolder);
 
-            // HIGH PERFORMANCE & LOW RAM/CPU CHROMIUM ARGUMENTS WITH EXTENSIONS ENABLED
-            options.AdditionalBrowserArguments = proxyArg +
+            // HIGH PERFORMANCE & LOW RAM/CPU CHROMIUM ARGUMENTS WITH AUTOMATIC EXTENSION LOADING
+            options.AdditionalBrowserArguments = proxyArg + extArg +
                 "--disable-background-networking " +
                 "--disable-background-timer-throttling " +
                 "--disable-client-side-phishing-detection " +

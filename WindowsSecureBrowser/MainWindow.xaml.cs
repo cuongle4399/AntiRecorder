@@ -251,6 +251,7 @@ namespace WindowsSecureBrowser
             if (BookmarksModal != null && BookmarksModal != activeModal) BookmarksModal.Visibility = Visibility.Collapsed;
             if (DownloadsModal != null && DownloadsModal != activeModal) DownloadsModal.Visibility = Visibility.Collapsed;
             if (ProxyModal != null && ProxyModal != activeModal) ProxyModal.Visibility = Visibility.Collapsed;
+            if (ExtensionsModal != null && ExtensionsModal != activeModal) ExtensionsModal.Visibility = Visibility.Collapsed;
             if (ScreenshotModal != null && ScreenshotModal != activeModal) ScreenshotModal.Visibility = Visibility.Collapsed;
             if (SettingsModal != null && SettingsModal != activeModal) SettingsModal.Visibility = Visibility.Collapsed;
             if (HelpModal != null && HelpModal != activeModal) HelpModal.Visibility = Visibility.Collapsed;
@@ -265,6 +266,7 @@ namespace WindowsSecureBrowser
                                   (BookmarksModal.Visibility == Visibility.Visible) ||
                                   (DownloadsModal != null && DownloadsModal.Visibility == Visibility.Visible) ||
                                   (ProxyModal != null && ProxyModal.Visibility == Visibility.Visible) ||
+                                  (ExtensionsModal != null && ExtensionsModal.Visibility == Visibility.Visible) ||
                                   (ScreenshotModal.Visibility == Visibility.Visible) ||
                                   (SettingsModal.Visibility == Visibility.Visible) ||
                                   (HelpModal.Visibility == Visibility.Visible) ||
@@ -1498,13 +1500,108 @@ namespace WindowsSecureBrowser
         private void BtnExtensionStoreFromOverflow_Click(object sender, RoutedEventArgs e)
         {
             OverflowMenuModal.Visibility = Visibility.Collapsed;
+            ToggleExtensionsModal();
+        }
+
+        private void ToggleExtensionsModal()
+        {
+            bool wasOpen = ExtensionsModal.Visibility == Visibility.Visible;
+            CloseAllModalsExcept(wasOpen ? null : ExtensionsModal);
+            ExtensionsModal.Visibility = wasOpen ? Visibility.Collapsed : Visibility.Visible;
+            if (ExtensionsModal.Visibility == Visibility.Visible)
+            {
+                RefreshExtensionsUI();
+            }
+            UpdateModalVisibilities();
+        }
+
+        private void BtnCloseExtensionsModal_Click(object sender, RoutedEventArgs e)
+        {
+            ExtensionsModal.Visibility = Visibility.Collapsed;
+            UpdateModalVisibilities();
+        }
+
+        private void BtnOpenExtensionsFolder_Click(object sender, RoutedEventArgs e)
+        {
+            var profile = _browserManager.ProfileManager.CurrentProfile;
+            ExtensionManager.OpenExtensionFolder(profile.UserDataFolder);
+        }
+
+        private void BtnOpenChromeStore_Click(object sender, RoutedEventArgs e)
+        {
+            ExtensionsModal.Visibility = Visibility.Collapsed;
+            UpdateModalVisibilities();
             var active = _browserManager.TabManager.ActiveTab;
             if (active != null)
             {
                 _webViewManager.Navigate(active.WebView, "https://chromewebstore.google.com");
             }
-            UpdateModalVisibilities();
         }
+
+        private void RefreshExtensionsUI()
+        {
+            if (ExtensionsListContainer == null) return;
+            ExtensionsListContainer.Children.Clear();
+
+            var profile = _browserManager.ProfileManager.CurrentProfile;
+            var list = ExtensionManager.GetInstalledExtensions(profile.UserDataFolder);
+
+            if (list.Count == 0)
+            {
+                ExtensionsListContainer.Children.Add(new TextBlock
+                {
+                    Text = "Chưa có Extension nào. Bấm '📂 Thư Mục Extensions' để thả thư mục extension vào.",
+                    FontSize = 11,
+                    Opacity = 0.7,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 10, 0, 10),
+                    TextWrapping = TextWrapping.Wrap
+                });
+                return;
+            }
+
+            bool isLight = string.Equals(_appSettings?.ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
+
+            foreach (var item in list)
+            {
+                var card = new Border
+                {
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(8, 6, 8, 6),
+                    Margin = new Thickness(0, 0, 0, 6),
+                    BorderThickness = new Thickness(1),
+                    Background = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(241, 245, 249) : System.Windows.Media.Color.FromRgb(30, 41, 59)),
+                    BorderBrush = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225) : System.Windows.Media.Color.FromRgb(51, 65, 85))
+                };
+
+                var stack = new StackPanel();
+
+                var txtName = new TextBlock
+                {
+                    Text = $"🧩 {item.Name} (v{item.Version})",
+                    FontSize = 11,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(56, 189, 248))
+                };
+
+                var txtDesc = new TextBlock
+                {
+                    Text = string.IsNullOrWhiteSpace(item.Description) ? "Extension chạy trực tiếp trên Chromium." : item.Description,
+                    FontSize = 10,
+                    Opacity = 0.8,
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 2, 0, 0)
+                };
+
+                stack.Children.Add(txtName);
+                stack.Children.Add(txtDesc);
+                card.Child = stack;
+
+                ExtensionsListContainer.Children.Add(card);
+            }
+        }
+
+        #region Overflow Menu Handlers
 
         private void BtnScreenshotFromOverflow_Click(object sender, RoutedEventArgs e)
         {
@@ -1721,7 +1818,7 @@ namespace WindowsSecureBrowser
                 if (_appSettings != null)
                 {
                     _appSettings.ThemeMode = themeMode;
-                    Border[] modals = { SettingsModal, BookmarksModal, DownloadsModal, ProxyModal, GoogleAccountModal, HelpModal, ScreenshotModal, NotificationModal, OverflowMenuModal };
+                    Border[] modals = { SettingsModal, BookmarksModal, DownloadsModal, ProxyModal, ExtensionsModal, GoogleAccountModal, HelpModal, ScreenshotModal, NotificationModal, OverflowMenuModal };
                     _themeManager.ApplyTheme(themeMode, _currentWindowOpacity, _browserManager, _appSettings, modals);
                 }
             }
@@ -1767,5 +1864,6 @@ namespace WindowsSecureBrowser
             _hotkeyManager.UnregisterHotkeys();
             _trayManager.Dispose();
         }
+        #endregion
     }
 }
