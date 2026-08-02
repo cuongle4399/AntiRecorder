@@ -76,7 +76,7 @@
         </Style>
     </Window.Resources>
 
-    <Border x:Name="OuterWindowBorder" BorderBrush="#38BDF8" BorderThickness="1.5" CornerRadius="8" SnapsToDevicePixels="True">
+    <Border x:Name="OuterWindowBorder" BorderBrush="#38BDF8" BorderThickness="2" CornerRadius="8" SnapsToDevicePixels="True">
         <Grid x:Name="RootGrid" Background="#0B0F19">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Chrome Tab Bar -->
