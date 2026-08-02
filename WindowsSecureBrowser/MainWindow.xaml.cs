@@ -899,30 +899,30 @@ namespace WindowsSecureBrowser
 
             try
             {
-                // 1. Disable capture protection so DWM does NOT draw a white box
-                WindowProtection.DisableCaptureProtection(this);
-
-                // 2. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
+                // 1. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
                 WebViewHostGrid.Visibility = Visibility.Hidden;
                 this.WindowState = WindowState.Minimized;
                 this.Hide();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_HIDE);
 
-                // 3. Allow DWM compositor 400ms to completely unmap window surface from desktop composite
-                await Task.Delay(400);
+                // 2. Allow DWM compositor 300ms to completely unmap window surface from desktop composite
+                await Task.Delay(300);
 
-                // 4. Trigger regional crop capture overlay (Overlay is protected from screen recorders)
+                // 3. Trigger regional crop capture overlay (Overlay is protected from screen recorders)
                 _screenshotManager.TriggerRegionalCapture();
             }
             finally
             {
-                // 5. Unhide main WPF window & restore window state & protection mode
+                // 4. STRICT STEALTH: Re-enforce 100% protection FIRST before restoring window visibility!
+                WindowProtection.EnableCaptureProtection(this);
+
+                // 5. Unhide main WPF window & restore window state
+                WebViewHostGrid.Visibility = Visibility.Visible;
                 this.Show();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_RESTORE);
                 this.WindowState = WindowState.Normal;
                 this.Activate();
                 UpdateModalVisibilities();
-                WindowProtection.ApplyProtection(this, WindowProtection.CurrentMode);
             }
         }
 
@@ -937,30 +937,30 @@ namespace WindowsSecureBrowser
 
             try
             {
-                // 1. Disable capture protection so DWM does NOT draw a white box
-                WindowProtection.DisableCaptureProtection(this);
-
-                // 2. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
+                // 1. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
                 WebViewHostGrid.Visibility = Visibility.Hidden;
                 this.WindowState = WindowState.Minimized;
                 this.Hide();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_HIDE);
 
-                // 3. Allow DWM compositor 400ms to completely unmap window surface from desktop composite
-                await Task.Delay(400);
+                // 2. Allow DWM compositor 300ms to completely unmap window surface from desktop composite
+                await Task.Delay(300);
 
-                // 4. Trigger full screen capture
+                // 3. Trigger full screen capture
                 _screenshotManager.TriggerFullScreenCapture();
             }
             finally
             {
-                // 5. Unhide main WPF window & restore window state & protection mode
+                // 4. STRICT STEALTH: Re-enforce 100% protection FIRST before restoring window visibility!
+                WindowProtection.EnableCaptureProtection(this);
+
+                // 5. Unhide main WPF window & restore window state
+                WebViewHostGrid.Visibility = Visibility.Visible;
                 this.Show();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_RESTORE);
                 this.WindowState = WindowState.Normal;
                 this.Activate();
                 UpdateModalVisibilities();
-                WindowProtection.ApplyProtection(this, WindowProtection.CurrentMode);
             }
         }
 

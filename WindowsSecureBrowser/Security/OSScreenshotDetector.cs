@@ -112,12 +112,12 @@ namespace WindowsSecureBrowser.Security
                 WindowProtection.DisableCaptureProtection(_targetWindow);
             });
 
-            // Re-enable protection after 5000ms (5s) or when user clicks back into app
+            // Re-enable protection after 600ms or when user clicks back into app
             Task.Run(async () =>
             {
                 try
                 {
-                    await Task.Delay(5000, token);
+                    await Task.Delay(600, token);
                     if (!token.IsCancellationRequested && _targetWindow != null)
                     {
                         _targetWindow.Dispatcher.Invoke(() =>
