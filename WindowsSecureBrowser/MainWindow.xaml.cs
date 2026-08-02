@@ -419,11 +419,9 @@ namespace WindowsSecureBrowser
                 {
                     bool isActive = (btn.Tag == tab);
                     btn.Background = isActive ? 
-                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(51, 65, 85)) : 
-                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
-                    btn.Foreground = isActive ?
-                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)) :
-                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(220, 51, 65, 85)) : 
+                        new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(160, 15, 23, 42));
+                    btn.Foreground = System.Windows.Media.Brushes.White;
                 }
             }
         }
