@@ -1,22 +1,46 @@
-# AntiRecorder - Trình Duyệt Bảo Mật & Riêng Tư
+# AntiRecorder
 
-AntiRecorder là trình duyệt web riêng tư cao cấp trên Windows PC, hỗ trợ chống quay lén màn hình, tùy chỉnh trong suốt và nạp Chrome Extension.
+Trình duyệt web ẩn 100% trước phần mềm quay màn hình (OBS, Zoom, Discord, Bandicam...) trên Windows.
 
-## Chức Năng Chính
+## Chức năng chính
 
-* **Chống quay chụp màn hình**: Tự động tàng hình trước OBS, Discord, Zoom, Bandicam và ẩn hoàn toàn khỏi thanh Taskbar Windows.
-* **Cài đặt & nạp Chrome Extension**: Tự động nạp các tiện ích mở rộng Google Chrome và tích hợp lối tắt Chrome Web Store.
-* **Cấu hình Proxy từng Tab**: Hỗ trợ định dạng `ip:port` và `ip:port:user:pass` kèm tính năng test Ping ms thời gian thực.
-* **Độ trong suốt xuyên thấu (20% - 100%)**: Tùy chỉnh nhìn xuyên thấu desktop và ứng dụng bên dưới.
-* **Tùy chỉnh Scale Web (1% - 300%)**: Mặc định 75%, linh hoạt thu phóng trang web.
-* **Chụp ảnh màn hình RAM & OCR**: Chụp ảnh bảo mật chỉ lưu trên RAM (Ctrl+V dán ngay) và trích xuất chữ OCR.
-* **Quản lý Tải xuống & Bookmarks**: Hỗ trợ mở file/thư mục trong Explorer và lưu trang yêu thích.
-* **Tắt tiếng mặc định (Audio Mute)**: Tự động tắt tiếng mọi trang web khi mở app.
-* **Kéo di chuyển cửa sổ**: Kéo rê ứng dụng mượt mà bằng nút `✥`.
+**Bảo mật & Tàng hình**
+- Ẩn hoàn toàn cửa sổ khỏi mọi phần mềm quay/chụp màn hình
+- Con trỏ chuột hiển thị bình thường trên màn hình, tàng hình trên máy quay
+- Ẩn khỏi Alt+Tab, Win+Tab, Taskbar
+- Nút chụp màn hình tích hợp, ảnh lưu thẳng vào Clipboard, không ghi đĩa
 
-## Phím Tắt
+**Trình duyệt**
+- Hỗ trợ đa tab, proxy riêng từng tab (HTTP/SOCKS5 + kiểm tra ping)
+- Cài đặt Chrome Extension (kéo thả thư mục vào)
+- Tài khoản Google riêng biệt theo profile
+- Bookmark, lịch sử, tải file, zoom trang web
 
-* `F4` hoặc `Ctrl + Shift + Space`: Ẩn / Hiện nhanh trình duyệt.
-* `Ctrl + Shift + S`: Chụp ảnh màn hình RAM + OCR.
-* `Chuột giữa`: Đóng Tab nhanh.
-* `Kéo nút ✥`: Di chuyển cửa sổ ứng dụng.
+**Tiện ích**
+- Luôn nổi trên cùng (Topmost) khi làm việc với app khác
+- Tắt/bật âm thanh trang web
+- Giao diện Dark / Light, điều chỉnh độ trong suốt
+- Portable 100%, không cần cài đặt
+
+## Phím tắt
+
+| Phím | Chức năng |
+|------|-----------|
+| F4 / Ctrl+Shift+Space | Ẩn/hiện app |
+| Ctrl+Shift+S | Chụp màn hình |
+| Ctrl+T | Tab mới |
+| Ctrl+W | Đóng tab |
+
+## Build
+
+Yêu cầu: Windows 10/11 x64, .NET 9 SDK
+
+```bash
+BuildScripts\Build_Windows.bat
+```
+
+Output: `BuildOutput\AntiRecorder.exe` (Portable, không cần cài thêm gì)
+
+## License
+
+MIT © [Cuong Le](https://github.com/cuongle4399)
