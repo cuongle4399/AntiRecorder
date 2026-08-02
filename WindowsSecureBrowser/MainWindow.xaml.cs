@@ -1047,6 +1047,34 @@ namespace WindowsSecureBrowser
             _appSettings.SaveConfig();
         }
 
+        private void UpdateControlThemeRecursive(DependencyObject parent, System.Windows.Media.Brush fg, System.Windows.Media.Brush secondaryFg, System.Windows.Media.Brush cardBg, System.Windows.Media.Brush borderBrush)
+        {
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
+            for (int i = 0; i < count; i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
+
+                if (child is TextBlock tb)
+                {
+                    tb.Foreground = fg;
+                }
+                else if (child is System.Windows.Controls.RadioButton rb)
+                {
+                    rb.Foreground = fg;
+                }
+                else if (child is Border b && b.Name != "OuterWindowBorder")
+                {
+                    b.Background = cardBg;
+                    b.BorderBrush = borderBrush;
+                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, borderBrush);
+                }
+                else
+                {
+                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, borderBrush);
+                }
+            }
+        }
+
         private void ApplyTheme(string themeMode)
         {
             if (_isInitializingTheme) return;
@@ -1064,6 +1092,7 @@ namespace WindowsSecureBrowser
 
                 byte mainAlpha = isGlass ? (byte)60 : (byte)255;
                 byte panelAlpha = isGlass ? (byte)150 : (byte)255;
+                byte cardAlpha = isGlass ? (byte)170 : (byte)255;
                 byte barAlpha = isGlass ? (byte)90 : (byte)255;
 
                 var bgMain = new System.Windows.Media.SolidColorBrush(
@@ -1071,8 +1100,12 @@ namespace WindowsSecureBrowser
                             : System.Windows.Media.Color.FromArgb(mainAlpha, 11, 15, 25));
 
                 var bgPanel = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromArgb(panelAlpha, 226, 232, 240)
+                    isLight ? System.Windows.Media.Color.FromArgb(panelAlpha, 255, 255, 255)
                             : System.Windows.Media.Color.FromArgb(panelAlpha, 21, 29, 42));
+
+                var bgCard = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromArgb(cardAlpha, 241, 245, 249)
+                            : System.Windows.Media.Color.FromArgb(cardAlpha, 30, 41, 59));
 
                 var bgBar = new System.Windows.Media.SolidColorBrush(
                     isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 226, 232, 240)
@@ -1082,8 +1115,17 @@ namespace WindowsSecureBrowser
                     isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 241, 245, 249)
                             : System.Windows.Media.Color.FromArgb(barAlpha, 21, 29, 42));
 
-                var borderBrush = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225) : System.Windows.Media.Color.FromRgb(51, 65, 85));
-                var textPrimary = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42) : System.Windows.Media.Color.FromRgb(248, 250, 252));
+                var borderBrush = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225)
+                            : System.Windows.Media.Color.FromRgb(51, 65, 85));
+
+                var textPrimary = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42)
+                            : System.Windows.Media.Color.FromRgb(248, 250, 252));
+
+                var textSecondary = new System.Windows.Media.SolidColorBrush(
+                    isLight ? System.Windows.Media.Color.FromRgb(51, 65, 85)
+                            : System.Windows.Media.Color.FromRgb(203, 213, 225));
 
                 this.Foreground = textPrimary;
                 this.Background = isGlass ? System.Windows.Media.Brushes.Transparent : bgMain;
@@ -1104,6 +1146,18 @@ namespace WindowsSecureBrowser
                 if (AddressBarToolbar != null) AddressBarToolbar.Background = bgToolbar;
                 if (StatusBarBorder != null) StatusBarBorder.Background = bgBar;
 
+                if (txtStatus != null) txtStatus.Foreground = textSecondary;
+                if (txtMemoryUsage != null) txtMemoryUsage.Foreground = textSecondary;
+
+                if (txtAddressBar != null)
+                {
+                    txtAddressBar.Background = new System.Windows.Media.SolidColorBrush(
+                        isLight ? System.Windows.Media.Color.FromRgb(255, 255, 255)
+                                : System.Windows.Media.Color.FromRgb(11, 15, 25));
+                    txtAddressBar.Foreground = textPrimary;
+                    txtAddressBar.BorderBrush = borderBrush;
+                }
+
                 Border[] modals = { SettingsModal, BookmarksModal, GoogleAccountModal, HelpModal, ScreenshotModal, NotificationModal };
                 foreach (var modal in modals)
                 {
@@ -1111,6 +1165,7 @@ namespace WindowsSecureBrowser
                     {
                         modal.Background = bgPanel;
                         modal.BorderBrush = borderBrush;
+                        UpdateControlThemeRecursive(modal, textPrimary, textSecondary, bgCard, borderBrush);
                     }
                 }
 

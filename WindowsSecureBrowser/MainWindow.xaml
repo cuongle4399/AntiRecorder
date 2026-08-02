@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
         Title="AntiRecorder - Trình Duyệt Bảo Mật Riêng Tư" Height="820" Width="1300"
-        MinWidth="980" MinHeight="650"
+        MinWidth="360" MinHeight="240"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True"
         WindowStyle="None"
