@@ -143,15 +143,11 @@
                 <TextBox x:Name="txtAddressBar" Grid.Column="1" Style="{StaticResource UrlBoxStyle}"
                          KeyDown="TxtAddressBar_KeyDown" Text="https://www.google.com"/>
 
-                <!-- Action Tools (Compact Icon Buttons & Always-Visible Menu Button) -->
+                <!-- Action Tools (Drag Handle & Menu Button) -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
-                    <StackPanel x:Name="QuickActionsPanel" Orientation="Horizontal">
-                        <Button Content="★" Click="BtnBookmark_Click" ToolTip="Quản lý Trang yêu thích (Bookmarks)" Width="30" Height="30" Margin="0,0,3,0" FontSize="13" Padding="0"/>
-                        <Button Content="📷" Click="BtnScreenshot_Click" ToolTip="Chụp ảnh màn hình (Ctrl+Shift+S)" Width="30" Height="30" Margin="0,0,3,0" FontSize="12" Padding="0"/>
-                        <Button Content="⬇" Click="BtnDownloads_Click" ToolTip="Danh sách Tải xuống" Width="30" Height="30" Margin="0,0,3,0" FontSize="12" Padding="0"/>
-                        <Button Content="⚙" Click="BtnSettings_Click" ToolTip="Cài đặt Ứng dụng &amp; Độ trong suốt" Width="30" Height="30" Margin="0,0,3,0" FontSize="12" Padding="0"/>
-                    </StackPanel>
-                    <!-- Menu button ALWAYS stays visible -->
+                    <!-- Drag Move Handle Button -->
+                    <Button x:Name="btnDragWindow" Content="✥" MouseDown="BtnDragWindow_MouseDown" ToolTip="Nhấp và giữ để kéo di chuyển ứng dụng (Drag Window)" Width="32" Height="30" Margin="0,0,3,0" Padding="0" FontSize="14" FontWeight="Bold" Cursor="SizeAll"/>
+                    <!-- Menu Button -->
                     <Button x:Name="btnOverflowMenu" Content="☰" Click="BtnOverflowMenu_Click" ToolTip="Menu Chức Năng" Width="32" Height="30" Padding="0" FontSize="14" FontWeight="Bold"/>
                 </StackPanel>
             </Grid>

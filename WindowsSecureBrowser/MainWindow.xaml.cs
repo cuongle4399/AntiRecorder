@@ -193,23 +193,6 @@ namespace WindowsSecureBrowser
 
             double w = e.NewSize.Width;
 
-            // 1. Responsive Toolbar Action Collapse (Hide quick icons when narrow < 540px, keep ☰ Menu always visible)
-            if (QuickActionsPanel != null && btnOverflowMenu != null)
-            {
-                if (w < 540)
-                {
-                    QuickActionsPanel.Visibility = Visibility.Collapsed;
-                    btnOverflowMenu.Visibility = Visibility.Visible;
-                }
-                else
-                {
-                    QuickActionsPanel.Visibility = Visibility.Visible;
-                    btnOverflowMenu.Visibility = Visibility.Visible;
-                }
-            }
-
-
-
             // 3. Responsive Nav Buttons in Address Toolbar
             if (btnForward != null && btnHome != null)
             {
@@ -224,9 +207,14 @@ namespace WindowsSecureBrowser
                     btnHome.Visibility = Visibility.Visible;
                 }
             }
+        }
 
-            // 4. Update Tab Header Widths
-            UpdateTabHeaderWidths();
+        private void BtnDragWindow_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (e.ChangedButton == System.Windows.Input.MouseButton.Left)
+            {
+                this.DragMove();
+            }
         }
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
