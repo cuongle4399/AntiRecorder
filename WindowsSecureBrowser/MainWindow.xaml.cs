@@ -1252,11 +1252,17 @@ namespace WindowsSecureBrowser
                     try
                     {
                         var colorScheme = isLight ? Microsoft.Web.WebView2.Core.CoreWebView2PreferredColorScheme.Light : Microsoft.Web.WebView2.Core.CoreWebView2PreferredColorScheme.Dark;
+                        System.Drawing.Color webBg = isGlass ? System.Drawing.Color.Transparent : (isLight ? System.Drawing.Color.White : System.Drawing.Color.FromArgb(11, 15, 25));
+
                         foreach (var tab in _browserManager.TabManager.Tabs)
                         {
-                            if (tab.WebView?.CoreWebView2?.Profile != null)
+                            if (tab.WebView != null)
                             {
-                                tab.WebView.CoreWebView2.Profile.PreferredColorScheme = colorScheme;
+                                tab.WebView.DefaultBackgroundColor = webBg;
+                                if (tab.WebView.CoreWebView2?.Profile != null)
+                                {
+                                    tab.WebView.CoreWebView2.Profile.PreferredColorScheme = colorScheme;
+                                }
                             }
                         }
                     }
