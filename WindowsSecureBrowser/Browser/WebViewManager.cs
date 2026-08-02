@@ -13,8 +13,8 @@ namespace WindowsSecureBrowser.Browser
             webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
             await webView.EnsureCoreWebView2Async(environment);
             
-            // Default configuration
-            webView.CoreWebView2.Settings.IsStatusBarEnabled = true;
+            // Default configuration - PRIVACY & STEALTH: Disable status bar hover URL popups
+            webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
             webView.CoreWebView2.Settings.IsWebMessageEnabled = true;
             webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
             webView.CoreWebView2.Settings.IsGeneralAutofillEnabled = true;

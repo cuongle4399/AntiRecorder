@@ -5,12 +5,6 @@ namespace WindowsSecureBrowser.Security
 {
     public static class SecurityCoreWrapper
     {
-        private const string DllName = "SecurityCore.dll";
-        private static bool? s_isNativeDllAvailable;
-
-        [DllImport(DllName, CallingConvention = CallingConvention.StdCall, EntryPoint = "SetWindowCaptureProtection")]
-        private static extern bool NativeSetWindowCaptureProtection(IntPtr hwnd, bool enable);
-
         [DllImport("user32.dll", SetLastError = true)]
         private static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
 
@@ -18,41 +12,35 @@ namespace WindowsSecureBrowser.Security
         private const uint WDA_MONITOR = 0x00000001;
         private const uint WDA_EXCLUDEFROMCAPTURE = 0x00000011;
 
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumChildWindows(IntPtr hWndParent, EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
         public static bool SetWindowProtection(IntPtr hwnd, bool enable)
         {
-            if (s_isNativeDllAvailable == null)
-            {
-                try
-                {
-                    // Check if native C++ DLL is loaded
-                    NativeSetWindowCaptureProtection(IntPtr.Zero, false);
-                    s_isNativeDllAvailable = true;
-                }
-                catch
-                {
-                    s_isNativeDllAvailable = false;
-                }
-            }
-
-            if (s_isNativeDllAvailable == true)
-            {
-                try
-                {
-                    return NativeSetWindowCaptureProtection(hwnd, enable);
-                }
-                catch
-                {
-                    s_isNativeDllAvailable = false;
-                }
-            }
-
-            // Direct Win32 Fallback
             uint affinity = enable ? WDA_EXCLUDEFROMCAPTURE : WDA_NONE;
             bool success = SetWindowDisplayAffinity(hwnd, affinity);
             if (!success && enable)
             {
                 success = SetWindowDisplayAffinity(hwnd, WDA_MONITOR);
             }
+
+            // Recursively protect all child HWNDs (WebView2, popups, tooltips)
+            try
+            {
+                EnumChildWindows(hwnd, (childHwnd, lParam) =>
+                {
+                    try
+                    {
+                        SetWindowDisplayAffinity(childHwnd, affinity);
+                    }
+                    catch { }
+                    return true;
+                }, IntPtr.Zero);
+            }
+            catch { }
+
             return success;
         }
     }
