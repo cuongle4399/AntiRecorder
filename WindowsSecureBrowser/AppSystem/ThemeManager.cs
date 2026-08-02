@@ -124,6 +124,7 @@ namespace WindowsSecureBrowser.UI
             if (_mainWindow.rbDarkTheme != null) _mainWindow.rbDarkTheme.Foreground = textPrimary;
             if (_mainWindow.rbLightTheme != null) _mainWindow.rbLightTheme.Foreground = textPrimary;
             if (_mainWindow.chkMuteAudio != null) _mainWindow.chkMuteAudio.Foreground = textPrimary;
+            if (_mainWindow.chkAlwaysOnTop != null) _mainWindow.chkAlwaysOnTop.Foreground = textPrimary;
 
             UpdateAllTabStyles(_mainWindow.TabContainer, browserManager?.TabManager?.ActiveTab, themeMode, currentWindowOpacity);
 
