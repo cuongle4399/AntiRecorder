@@ -342,12 +342,19 @@
                                     <TextBlock Text="👁️ Độ Trong Suốt Giao Diện (Transparent)" FontSize="14" FontWeight="Bold" Foreground="#F8FAFC" VerticalAlignment="Center"/>
                                 </DockPanel>
 
-                                <TextBlock Text="Kéo thanh trượt để chỉnh độ trong suốt (Alpha/Transparent) toàn bộ phần mềm từ 20% đến 100% để nhìn xuyên thấu màn hình bên dưới:"
+                                <TextBlock Text="Kéo thanh trượt để thử nghiệm độ trong suốt (Alpha/Transparent) trực tiếp. Khi đã ưng ý, bấm nút [💾 Lưu Cấu Hình] bên dưới để lưu giữ cài đặt:"
                                            Foreground="#CBD5E1" FontSize="12" Margin="0,0,0,12" TextWrapping="Wrap"/>
 
                                 <Slider x:Name="sldOpacity" Minimum="0.2" Maximum="1.0" Value="1.0"
-                                        SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True"
-                                        ValueChanged="SldOpacity_ValueChanged" Margin="0,0,0,4"/>
+                                        SmallChange="0.05" LargeChange="0.1" TickFrequency="0.02" IsSnapToTickEnabled="True"
+                                        ValueChanged="SldOpacity_ValueChanged" Margin="0,0,0,10"/>
+
+                                <DockPanel>
+                                    <Button x:Name="btnSaveSettings" Click="BtnSaveSettings_Click" Content="💾 Lưu Cấu Hình Cài Đặt"
+                                            DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" Padding="14,6"
+                                            Background="#0F172A" Foreground="#38BDF8" BorderBrush="#0EA5E9" BorderThickness="1"/>
+                                    <TextBlock x:Name="txtSaveSettingsStatus" Text="" Foreground="#4ADE80" FontSize="12" VerticalAlignment="Center" TextWrapping="Wrap"/>
+                                </DockPanel>
                             </StackPanel>
                         </Border>
 

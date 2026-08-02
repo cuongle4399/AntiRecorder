@@ -969,6 +969,7 @@ namespace WindowsSecureBrowser
             if (SettingsModal.Visibility == Visibility.Visible)
             {
                 txtCleanupStatus.Text = "";
+                if (txtSaveSettingsStatus != null) txtSaveSettingsStatus.Text = "";
                 sldOpacity.Value = this.Opacity;
                 txtOpacityPercent.Text = $"{(int)(this.Opacity * 100)}% ({((this.Opacity >= 0.98) ? "Không Trong Suốt" : "Glass Mode")})";
             }
@@ -1032,9 +1033,26 @@ namespace WindowsSecureBrowser
             {
                 ApplyWindowOpacity(e.NewValue);
                 txtOpacityPercent.Text = $"{(int)(e.NewValue * 100)}% ({((e.NewValue >= 0.98) ? "Không Trong Suốt" : "Glass Mode")})";
-                _appSettings.WindowOpacity = e.NewValue;
-                _appSettings.SaveConfig();
+                if (txtSaveSettingsStatus != null)
+                {
+                    txtSaveSettingsStatus.Text = "⏳ Chưa lưu (Bấm 'Lưu Cấu Hình' để lưu)";
+                    txtSaveSettingsStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36));
+                }
             }
+        }
+
+        private void BtnSaveSettings_Click(object sender, RoutedEventArgs e)
+        {
+            _appSettings.WindowOpacity = sldOpacity.Value;
+            _appSettings.ThemeMode = (rbLightTheme?.IsChecked == true) ? "Light" : "Dark";
+            _appSettings.SaveConfig();
+
+            if (txtSaveSettingsStatus != null)
+            {
+                txtSaveSettingsStatus.Text = "✅ Đã lưu cấu hình độ trong suốt thành công!";
+                txtSaveSettingsStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(74, 222, 128));
+            }
+            ShowAppNotification("Đã lưu giữ cấu hình độ trong suốt thành công!", "Đã Lưu Cài Đặt");
         }
 
         private bool _isInitializingTheme = false;
