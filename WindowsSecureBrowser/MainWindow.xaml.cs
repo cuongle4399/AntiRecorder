@@ -495,6 +495,49 @@ namespace WindowsSecureBrowser
             UpdateAllTabStyles();
         }
 
+        #region Dynamic DPI & Responsive Font Scaling
+        private double GetDynamicScaleFactor()
+        {
+            double w = this.ActualWidth > 0 ? this.ActualWidth : 600;
+            // Base window width is 600px. Scale factor smoothly ranges from 0.95 (narrow) up to 1.35 (maximized 1920px+)
+            return Math.Clamp(0.95 + (w - 400.0) / 1400.0 * 0.4, 0.95, 1.35);
+        }
+
+        private double ScaledFont(double baseFontSize)
+        {
+            return Math.Round(baseFontSize * GetDynamicScaleFactor(), 1);
+        }
+
+        private void UpdateDynamicFontSize()
+        {
+            double scale = GetDynamicScaleFactor();
+            double titleFontSize = Math.Round(11 * scale, 1);
+            double addressFontSize = Math.Round(12 * scale, 1);
+            double statusFontSize = Math.Round(11 * scale, 1);
+
+            if (txtAddressBar != null) txtAddressBar.FontSize = addressFontSize;
+            if (txtStatus != null) txtStatus.FontSize = statusFontSize;
+            if (txtProxyBadge != null) txtProxyBadge.FontSize = statusFontSize;
+            if (btnNewTab != null) btnNewTab.FontSize = Math.Round(15 * scale, 1);
+
+            // Update Tab Titles FontSize dynamically
+            if (TabContainer != null)
+            {
+                foreach (UIElement elem in TabContainer.Children)
+                {
+                    if (elem is System.Windows.Controls.Button btn && btn.Content is Grid grid)
+                    {
+                        btn.Height = Math.Round(28 * scale);
+                        if (grid.Children.Count > 0 && grid.Children[0] is TextBlock txtTitle)
+                        {
+                            txtTitle.FontSize = titleFontSize;
+                        }
+                    }
+                }
+            }
+        }
+        #endregion
+
         private double GetTargetTabWidth()
         {
             double windowWidth = this.ActualWidth > 0 ? this.ActualWidth : 600;
@@ -536,7 +579,7 @@ namespace WindowsSecureBrowser
                 Text = tab.Title,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
-                FontSize = 11,
+                FontSize = ScaledFont(11),
                 Margin = new Thickness(0, 0, 2, 0)
             };
 
@@ -611,7 +654,9 @@ namespace WindowsSecureBrowser
 
         private void UpdateAllTabStyles()
         {
+            // 4. Update Tab Header Widths & Dynamic Font Scaling
             UpdateTabHeaderWidths();
+            UpdateDynamicFontSize();
             string mode = _appSettings?.ThemeMode ?? "Dark";
             _themeManager?.UpdateAllTabStyles(TabContainer, _browserManager?.TabManager?.ActiveTab, mode, _currentWindowOpacity);
         }
