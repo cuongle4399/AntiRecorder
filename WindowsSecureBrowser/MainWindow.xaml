@@ -149,7 +149,7 @@
                     <Border x:Name="btnDragWindow" PreviewMouseLeftButtonDown="BtnDragWindow_PreviewMouseLeftButtonDown"
                             ToolTip="Nhấp và giữ chuột trái để kéo di chuyển ứng dụng (Drag Window)"
                             Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="4"
-                            Width="32" Height="30" Margin="0,0,3,0" Cursor="SizeAll">
+                            Width="32" Height="30" Margin="0,0,3,0" Cursor="Arrow">
                         <TextBlock Text="✥" Foreground="#F8FAFC" FontSize="14" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
