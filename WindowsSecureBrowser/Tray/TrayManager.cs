@@ -67,10 +67,11 @@ namespace WindowsSecureBrowser.Tray
         {
             if (_mainWindow == null) return;
 
+            // STRICT STEALTH: Enforce protection FIRST before restoring window surface visibility!
+            WindowProtection.EnableCaptureProtection(_mainWindow);
             _mainWindow.ShowInTaskbar = false;
             _mainWindow.Show();
             _mainWindow.WindowState = WindowState.Normal;
-            WindowProtection.EnableCaptureProtection(_mainWindow);
             _mainWindow.Activate();
             _mainWindow.Focus();
         }

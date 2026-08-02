@@ -1,4 +1,8 @@
 using System;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Interop;
 
@@ -15,6 +19,7 @@ namespace WindowsSecureBrowser.Security
     {
         public static ProtectionMode CurrentMode { get; set; } = ProtectionMode.FullStealth;
         private static bool _isProtectionDisabledTemporarily = false;
+        private static bool _isBackgroundScannerStarted = false;
 
         public static bool IsProtectionDisabledTemporarily => _isProtectionDisabledTemporarily;
 
@@ -26,7 +31,6 @@ namespace WindowsSecureBrowser.Security
             IntPtr hwnd = new WindowInteropHelper(window).Handle;
             if (hwnd == IntPtr.Zero) return false;
 
-            // Enforce WDA_EXCLUDEFROMCAPTURE to hide app window 100% PERMANENTLY from screen recorders (OBS, Discord, Zoom, Camtasia...)
             return SecurityCoreWrapper.SetWindowProtection(hwnd, true);
         }
 
@@ -38,7 +42,6 @@ namespace WindowsSecureBrowser.Security
 
         public static bool DisableCaptureProtection(Window window)
         {
-            // Only used internally during OS screenshot (PrintScreen / Win+Shift+S) or regional screenshot capture
             _isProtectionDisabledTemporarily = true;
             IntPtr hwnd = new WindowInteropHelper(window).Handle;
             if (hwnd == IntPtr.Zero) return false;
@@ -54,6 +57,56 @@ namespace WindowsSecureBrowser.Security
                 source?.AddHook(WndProcProtectionHook);
                 ApplyProtection(window, ProtectionMode.FullStealth);
             }
+
+            StartProcessWideStealthScanner();
+        }
+
+        private static void StartProcessWideStealthScanner()
+        {
+            if (_isBackgroundScannerStarted) return;
+            _isBackgroundScannerStarted = true;
+
+            Task.Run(async () =>
+            {
+                int currentPid = Process.GetCurrentProcess().Id;
+                while (true)
+                {
+                    try
+                    {
+                        await Task.Delay(1000);
+                        if (!_isProtectionDisabledTemporarily)
+                        {
+                            ProtectAllProcessWindows(currentPid);
+                        }
+                    }
+                    catch { }
+                }
+            });
+        }
+
+        private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+        private static void ProtectAllProcessWindows(int targetPid)
+        {
+            try
+            {
+                EnumWindows((hwnd, lParam) =>
+                {
+                    GetWindowThreadProcessId(hwnd, out uint pid);
+                    if (pid == targetPid)
+                    {
+                        SecurityCoreWrapper.SetWindowProtection(hwnd, true);
+                    }
+                    return true;
+                }, IntPtr.Zero);
+            }
+            catch { }
         }
 
         private static IntPtr WndProcProtectionHook(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -65,13 +118,21 @@ namespace WindowsSecureBrowser.Security
             const int WM_ENTERSIZEMOVE = 0x0231;
             const int WM_EXITSIZEMOVE = 0x0232;
             const int WM_NCACTIVATE = 0x0086;
+            const int WM_MOVE = 0x0003;
+            const int WM_SIZE = 0x0005;
+            const int WM_MOVING = 0x0216;
+            const int WM_SIZING = 0x0214;
+            const int WM_PAINT = 0x000F;
+            const int WM_DISPLAYCHANGE = 0x007E;
+            const int WM_DPICHANGED = 0x02E0;
 
             if (msg == WM_SHOWWINDOW || msg == WM_ACTIVATE || msg == WM_WINDOWPOSCHANGED ||
-                msg == WM_STYLECHANGED || msg == WM_ENTERSIZEMOVE || msg == WM_EXITSIZEMOVE || msg == WM_NCACTIVATE)
+                msg == WM_STYLECHANGED || msg == WM_ENTERSIZEMOVE || msg == WM_EXITSIZEMOVE ||
+                msg == WM_NCACTIVATE || msg == WM_MOVE || msg == WM_SIZE || msg == WM_MOVING ||
+                msg == WM_SIZING || msg == WM_PAINT || msg == WM_DISPLAYCHANGE || msg == WM_DPICHANGED)
             {
                 if (!_isProtectionDisabledTemporarily)
                 {
-                    // Re-enforce Anti-Recording Protection when not temporarily suspended for OS screenshot
                     SecurityCoreWrapper.SetWindowProtection(hwnd, true);
                 }
             }
