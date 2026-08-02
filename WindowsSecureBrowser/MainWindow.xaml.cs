@@ -306,7 +306,7 @@ namespace WindowsSecureBrowser
                 newWebView.CoreWebView2.NavigationCompleted += (s, e) =>
                 {
                     ApplyThemeToTab(tab);
-                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.3, 3.0); } catch { }
+                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.01, 3.0); } catch { }
                 };
 
                 _browserManager.DownloadManager.RegisterDownloadEvents(newWebView.CoreWebView2);
@@ -346,7 +346,7 @@ namespace WindowsSecureBrowser
             tab.WebView.CoreWebView2.NavigationCompleted += (s, e) =>
             {
                 ApplyThemeToTab(tab);
-                try { if (_appSettings != null) tab.WebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.3, 3.0); } catch { }
+                try { if (_appSettings != null) tab.WebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.01, 3.0); } catch { }
             };
 
             _browserManager.DownloadManager.RegisterDownloadEvents(tab.WebView.CoreWebView2);
@@ -1395,7 +1395,7 @@ namespace WindowsSecureBrowser
                 newWebView.CoreWebView2.NavigationCompleted += (s, e) =>
                 {
                     ApplyThemeToTab(tab);
-                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.3, 3.0); } catch { }
+                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.01, 3.0); } catch { }
                 };
 
                 _browserManager.DownloadManager.RegisterDownloadEvents(newWebView.CoreWebView2);
@@ -1625,7 +1625,7 @@ namespace WindowsSecureBrowser
                     {
                         if (tab.WebView != null)
                         {
-                            tab.WebView.ZoomFactor = Math.Clamp(zoom, 0.3, 3.0);
+                            tab.WebView.ZoomFactor = Math.Clamp(zoom, 0.01, 3.0);
                         }
                     }
                     catch { }

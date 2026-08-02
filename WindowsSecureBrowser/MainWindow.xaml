@@ -414,8 +414,8 @@
                         <DockPanel>
                             <TextBlock x:Name="txtZoomPercent" Text="100%" DockPanel.Dock="Right" FontSize="12" FontWeight="Bold" VerticalAlignment="Center"/>
                             <TextBlock Text="🔍 Scale Web:" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" Margin="0,0,6,0"/>
-                            <Slider x:Name="sldZoom" Minimum="0.5" Maximum="1.5" Value="1.0"
-                                    SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="True"
+                            <Slider x:Name="sldZoom" Minimum="0.01" Maximum="3.0" Value="1.0"
+                                    SmallChange="0.05" LargeChange="0.1" TickFrequency="0.05" IsSnapToTickEnabled="False"
                                     ValueChanged="SldZoom_ValueChanged" VerticalAlignment="Center"/>
                         </DockPanel>
                     </Border>

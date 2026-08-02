@@ -72,7 +72,7 @@ namespace WindowsSecureBrowser.AppSystem
                         {
                             this.StartupHeight = model.StartupHeight;
                         }
-                        if (model.ZoomFactor >= 0.3 && model.ZoomFactor <= 3.0)
+                        if (model.ZoomFactor >= 0.01 && model.ZoomFactor <= 3.0)
                         {
                             this.ZoomFactor = model.ZoomFactor;
                         }
