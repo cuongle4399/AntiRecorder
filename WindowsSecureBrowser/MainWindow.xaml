@@ -90,32 +90,35 @@
         </Grid.RowDefinitions>
 
         <!-- 1. Chrome-Style Tab Bar Header -->
-        <Border x:Name="TabBarHeader" Grid.Row="0" Background="#060A12" Padding="6,5,6,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" MouseDown="Window_MouseDown">
-            <DockPanel LastChildFill="True">
-                <!-- Right-side Actions: Window Controls -->
-                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,4,0" VerticalAlignment="Center">
-                    <!-- Chrome Window Controls -->
-                    <Button Content="—" Click="BtnMinimize_Click" Width="30" Height="26" Margin="0,0,3,0" Padding="0" FontSize="10" ToolTip="Thu nhỏ (Minimize)"/>
-                    <Button Content="☐" Click="BtnMaximize_Click" Width="30" Height="26" Margin="0,0,3,0" Padding="0" FontSize="11" ToolTip="Phóng to / Phục hồi (Maximize)"/>
-                    <Button Content="✕" Click="BtnCloseWindow_Click" Width="30" Height="26" Padding="0" FontSize="11" Background="#DC2626" Foreground="#FFFFFF" BorderBrush="#EF4444" ToolTip="Thoát ứng dụng (Close)"/>
-                </StackPanel>
+        <Border x:Name="TabBarHeader" Grid.Row="0" Background="#060A12" Padding="6,4,6,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" MouseDown="Window_MouseDown">
+            <Grid x:Name="TabBarGrid">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>    <!-- Scrollable Tab Container -->
+                    <ColumnDefinition Width="Auto"/> <!-- New Tab (+) Button -->
+                    <ColumnDefinition Width="Auto"/> <!-- Window Controls (— ☐ ✕) -->
+                </Grid.ColumnDefinitions>
 
-                <!-- Chrome Tab Strip Container with Plus (+) Button -->
-                <StackPanel Orientation="Horizontal" VerticalAlignment="Bottom">
-                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
-                        <StackPanel x:Name="TabContainer" Orientation="Horizontal">
-                            <!-- Dynamic Chrome Tabs rendered programmatically -->
-                        </StackPanel>
-                    </ScrollViewer>
-                    <!-- Plus (+) New Tab Button -->
-                    <Button x:Name="btnNewTab" Content="+" Width="30" Height="28" Margin="4,0,0,2"
-                            ToolTip="Mở Tab Mới (Ctrl+T)" Click="BtnNewTab_Click"
-                            Background="#151D2A" Foreground="#F8FAFC" BorderBrush="#334155" BorderThickness="1"
-                            FontSize="16" FontWeight="Bold"
-                            VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0"/>
+                <!-- 1. Scrollable Chrome Tabs Strip -->
+                <ScrollViewer Grid.Column="0" x:Name="TabScrollViewer" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled" Focusable="False">
+                    <StackPanel x:Name="TabContainer" Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <!-- Dynamic Chrome Tabs rendered programmatically -->
+                    </StackPanel>
+                </ScrollViewer>
 
+                <!-- 2. Plus (+) New Tab Button (Fixed right beside tab strip) -->
+                <Button Grid.Column="1" x:Name="btnNewTab" Content="+" Width="28" Height="26" Margin="4,0,8,2"
+                        ToolTip="Mở Tab Mới (Ctrl+T)" Click="BtnNewTab_Click"
+                        Background="#151D2A" Foreground="#F8FAFC" BorderBrush="#334155" BorderThickness="1"
+                        FontSize="15" FontWeight="Bold" VerticalAlignment="Center"
+                        VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Padding="0"/>
+
+                <!-- 3. Right-side Actions: Window Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,2,0" VerticalAlignment="Center">
+                    <Button Content="—" Click="BtnMinimize_Click" Width="28" Height="24" Margin="0,0,3,0" Padding="0" FontSize="10" ToolTip="Thu nhỏ (Minimize)"/>
+                    <Button Content="☐" Click="BtnMaximize_Click" Width="28" Height="24" Margin="0,0,3,0" Padding="0" FontSize="11" ToolTip="Phóng to / Phục hồi (Maximize)"/>
+                    <Button Content="✕" Click="BtnCloseWindow_Click" Width="28" Height="24" Padding="0" FontSize="11" Background="#DC2626" Foreground="#FFFFFF" BorderBrush="#EF4444" ToolTip="Thoát ứng dụng (Close)"/>
                 </StackPanel>
-            </DockPanel>
+            </Grid>
         </Border>
 
         <!-- 2. Address & Navigation Toolbar with Monochrome Vector Icons -->

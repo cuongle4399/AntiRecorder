@@ -377,6 +377,13 @@ namespace WindowsSecureBrowser
             };
 
             btnTab.Click += (s, e) => _browserManager.TabManager.SelectTab(tab);
+            btnTab.MouseDown += (s, e) =>
+            {
+                if (e.ChangedButton == System.Windows.Input.MouseButton.Middle)
+                {
+                    _browserManager.TabManager.CloseTab(tab);
+                }
+            };
 
             btnTab.MouseEnter += (s, e) =>
             {
@@ -427,31 +434,27 @@ namespace WindowsSecureBrowser
             int tabCount = TabContainer?.Children?.Count ?? 1;
             if (tabCount <= 0) tabCount = 1;
 
-            // Compute available horizontal space for tab titles
-            // Window width minus window controls & margins (~110px) minus tab close buttons/padding (~28px per tab)
-            double availableTabSpace = Math.Max(40, windowWidth - 110 - (tabCount * 28));
-            double targetWidth = availableTabSpace / tabCount;
+            // Total available width for tabs (window width minus ~160px for controls & new tab button)
+            double availableSpace = Math.Max(80, windowWidth - 160);
+            double tabWidth = availableSpace / tabCount;
+            double titleWidth = Math.Clamp(tabWidth - 26, 20, 130);
 
-            // Maximum title width when few tabs exist
-            double maxWidth = windowWidth < 480 ? 60 : (windowWidth < 700 ? 80 : 110);
-            // Minimum title width when many tabs exist so tabs shrink narrow
-            double minWidth = tabCount >= 6 ? 20 : (tabCount >= 3 ? 30 : 45);
-
-            return Math.Clamp(targetWidth, minWidth, maxWidth);
+            return titleWidth;
         }
 
         private void UpdateTabHeaderWidths()
         {
             if (TabContainer == null) return;
-            double targetWidth = GetTargetTabTitleWidth();
+            double titleWidth = GetTargetTabTitleWidth();
 
             foreach (UIElement elem in TabContainer.Children)
             {
-                if (elem is System.Windows.Controls.Button btn && btn.Content is Grid grid)
+                if (elem is System.Windows.Controls.Button btn)
                 {
-                    if (grid.ColumnDefinitions.Count > 0)
+                    btn.MaxWidth = titleWidth + 30;
+                    if (btn.Content is Grid grid && grid.ColumnDefinitions.Count > 0)
                     {
-                        grid.ColumnDefinitions[0].Width = new GridLength(targetWidth);
+                        grid.ColumnDefinitions[0].Width = new GridLength(titleWidth);
                     }
                 }
             }
@@ -480,15 +483,17 @@ namespace WindowsSecureBrowser
                 Background = System.Windows.Media.Brushes.Transparent,
                 Foreground = System.Windows.Media.Brushes.LightGray,
                 BorderThickness = new Thickness(0),
-                Margin = new Thickness(6, 0, 0, 0),
+                Margin = new Thickness(4, 0, 0, 0),
                 Padding = new Thickness(0),
-                Width = 18,
-                Height = 18,
-                FontSize = 10,
+                Width = 20,
+                Height = 20,
+                FontSize = 11,
+                FontWeight = FontWeights.Bold,
                 VerticalAlignment = System.Windows.VerticalAlignment.Center,
                 HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
                 VerticalContentAlignment = System.Windows.VerticalAlignment.Center,
                 HorizontalContentAlignment = System.Windows.HorizontalAlignment.Center,
+                ToolTip = "Đóng Tab (hoặc nhấp chuột giữa)",
                 Cursor = System.Windows.Input.Cursors.Hand
             };
             btnClose.Click += (s, e) =>
