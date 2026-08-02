@@ -49,13 +49,11 @@ namespace WindowsSecureBrowser.Tray
             _notifyIcon.DoubleClick += (s, e) => ToggleWindow();
         }
 
-        private bool _isExplicitlyHidden = false;
-
         public void ToggleWindow()
         {
             if (_mainWindow == null) return;
 
-            if (!_isExplicitlyHidden && _mainWindow.IsVisible && _mainWindow.WindowState != WindowState.Minimized)
+            if (_mainWindow.IsVisible && _mainWindow.WindowState != WindowState.Minimized)
             {
                 HideWindow();
             }
@@ -68,28 +66,20 @@ namespace WindowsSecureBrowser.Tray
         public void ShowWindow()
         {
             if (_mainWindow == null) return;
-            _isExplicitlyHidden = false;
 
             // STRICT STEALTH: Enforce protection FIRST before restoring window surface visibility!
             WindowProtection.EnableCaptureProtection(_mainWindow);
             _mainWindow.ShowInTaskbar = false;
-            if (_mainWindow.WindowState == WindowState.Minimized)
-            {
-                _mainWindow.WindowState = WindowState.Normal;
-            }
             _mainWindow.Show();
+            _mainWindow.WindowState = WindowState.Normal;
             _mainWindow.Activate();
             _mainWindow.Focus();
-
-            // Bring window to top of z-order on 1st press
-            _mainWindow.Topmost = true;
-            _mainWindow.Topmost = false;
         }
+
 
         public void HideWindow()
         {
             if (_mainWindow == null) return;
-            _isExplicitlyHidden = true;
 
             _mainWindow.Hide();
         }
