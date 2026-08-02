@@ -6,7 +6,9 @@
         MinWidth="980" MinHeight="650"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="True"
-        Background="#0B0F19"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
         Foreground="#F8FAFC"
         UseLayoutRounding="True"
         TextOptions.TextFormattingMode="Display"
@@ -81,12 +83,17 @@
         <!-- 1. Chrome-Style Tab Bar Header -->
         <Border x:Name="TabBarHeader" Grid.Row="0" Background="#060A12" Padding="8,8,8,0" BorderBrush="#1E293B" BorderThickness="0,0,0,1" MouseDown="Window_MouseDown">
             <DockPanel LastChildFill="True">
-                <!-- Right-side Actions: Google Account Badge -->
+                <!-- Right-side Actions: Google Account Badge & Window Controls -->
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="8,0,4,0" VerticalAlignment="Center">
                     <!-- Google Account Profile Button -->
-                    <Border x:Name="GoogleAccountBadge" Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="14" Padding="12,4" Margin="0,0,4,0" Cursor="Hand" MouseDown="GoogleAccountBadge_MouseDown" ToolTip="Quản lý Tài khoản Google &amp; Đồng bộ">
+                    <Border x:Name="GoogleAccountBadge" Background="#151D2A" BorderBrush="#334155" BorderThickness="1" CornerRadius="14" Padding="12,4" Margin="0,0,12,0" Cursor="Hand" MouseDown="GoogleAccountBadge_MouseDown" ToolTip="Quản lý Tài khoản Google &amp; Đồng bộ">
                         <TextBlock x:Name="txtProfileName" Text="Tài khoản Google" Foreground="#F8FAFC" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center"/>
                     </Border>
+
+                    <!-- Chrome Window Controls -->
+                    <Button Content="—" Click="BtnMinimize_Click" Width="30" Height="26" Margin="0,0,3,0" Padding="0" FontSize="10" ToolTip="Thu nhỏ (Minimize)"/>
+                    <Button Content="☐" Click="BtnMaximize_Click" Width="30" Height="26" Margin="0,0,3,0" Padding="0" FontSize="11" ToolTip="Phóng to / Phục hồi (Maximize)"/>
+                    <Button Content="✕" Click="BtnCloseWindow_Click" Width="30" Height="26" Padding="0" FontSize="11" Background="#DC2626" Foreground="#FFFFFF" BorderBrush="#EF4444" ToolTip="Thoát ứng dụng (Close)"/>
                 </StackPanel>
 
                 <!-- Chrome Tab Strip Container with Plus (+) Button -->

@@ -116,6 +116,21 @@ namespace WindowsSecureBrowser
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
         }
+
+        private void BtnMinimize_Click(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = WindowState.Minimized;
+        }
+
+        private void BtnMaximize_Click(object sender, RoutedEventArgs e)
+        {
+            this.WindowState = (this.WindowState == WindowState.Maximized) ? WindowState.Normal : WindowState.Maximized;
+        }
+
+        private void BtnCloseWindow_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
         #endregion
 
         private void CloseAllModalsExcept(UIElement? activeModal = null)
@@ -920,21 +935,21 @@ namespace WindowsSecureBrowser
 
         public void ApplyWindowOpacity(double opacity)
         {
-            this.Opacity = opacity;
+            this.Opacity = Math.Clamp(opacity, 0.15, 1.0);
             try
             {
                 IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
                 if (hwnd != IntPtr.Zero)
                 {
                     int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-                    if (opacity >= 0.98)
+                    if (this.Opacity >= 0.98)
                     {
                         SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_LAYERED);
                     }
                     else
                     {
                         SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED);
-                        byte alpha = (byte)(Math.Clamp(opacity, 0.15, 1.0) * 255);
+                        byte alpha = (byte)(this.Opacity * 255);
                         SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
                     }
                 }
