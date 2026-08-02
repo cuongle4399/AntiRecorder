@@ -76,7 +76,8 @@
         </Style>
     </Window.Resources>
 
-    <Grid x:Name="RootGrid" Background="#0B0F19">
+    <Border x:Name="OuterWindowBorder" BorderBrush="#38BDF8" BorderThickness="1.5" CornerRadius="8" SnapsToDevicePixels="True">
+        <Grid x:Name="RootGrid" Background="#0B0F19">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Chrome Tab Bar -->
             <RowDefinition Height="Auto"/> <!-- Address Bar & Tools -->
@@ -415,4 +416,5 @@
             </DockPanel>
         </Border>
     </Grid>
+</Border>
 </Window>

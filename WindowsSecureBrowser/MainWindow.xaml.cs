@@ -168,13 +168,18 @@ namespace WindowsSecureBrowser
 
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (WindowState == WindowState.Maximized)
+            if (OuterWindowBorder != null)
             {
-                RootGrid.Margin = new Thickness(6);
-            }
-            else
-            {
-                RootGrid.Margin = new Thickness(0);
+                if (WindowState == WindowState.Maximized)
+                {
+                    OuterWindowBorder.CornerRadius = new CornerRadius(0);
+                    OuterWindowBorder.BorderThickness = new Thickness(0);
+                }
+                else
+                {
+                    OuterWindowBorder.CornerRadius = new CornerRadius(8);
+                    OuterWindowBorder.BorderThickness = new Thickness(1.5);
+                }
             }
         }
 
@@ -1104,6 +1109,13 @@ namespace WindowsSecureBrowser
 
                 this.Foreground = textPrimary;
                 this.Background = isGlass ? System.Windows.Media.Brushes.Transparent : bgMain;
+
+                if (OuterWindowBorder != null)
+                {
+                    OuterWindowBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
+                        isLight ? System.Windows.Media.Color.FromRgb(14, 165, 233)
+                                : System.Windows.Media.Color.FromRgb(56, 189, 248));
+                }
 
                 if (RootGrid != null)
                 {
