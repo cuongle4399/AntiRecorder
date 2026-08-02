@@ -343,7 +343,7 @@ namespace WindowsSecureBrowser
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
         {
-            this.WindowState = WindowState.Minimized;
+            _trayManager?.HideWindow();
         }
 
         private void BtnMaximize_Click(object sender, RoutedEventArgs e)
