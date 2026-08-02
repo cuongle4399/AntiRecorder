@@ -196,6 +196,14 @@ namespace WindowsSecureBrowser
 
         private const int WS_EX_TOOLWINDOW = 0x00000080;
         private const int WS_EX_APPWINDOW = 0x00040000;
+        private const int WM_SETCURSOR = 0x0020;
+        private const int IDC_ARROW = 32512;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr LoadCursor(IntPtr hInstance, int lpCursorName);
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr SetCursor(IntPtr hCursor);
 
         private void HideFromAltTab()
         {
@@ -226,6 +234,17 @@ namespace WindowsSecureBrowser
 
         private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
+            if (msg == WM_SETCURSOR)
+            {
+                IntPtr hArrow = LoadCursor(IntPtr.Zero, IDC_ARROW);
+                if (hArrow != IntPtr.Zero)
+                {
+                    SetCursor(hArrow);
+                    handled = true;
+                    return new IntPtr(1);
+                }
+            }
+
             if (msg == WM_GETMINMAXINFO)
             {
                 WmGetMinMaxInfo(hwnd, lParam);
