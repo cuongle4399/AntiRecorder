@@ -15,6 +15,7 @@ using WindowsSecureBrowser.Privacy;
 using WindowsSecureBrowser.Profile;
 using WindowsSecureBrowser.Security;
 using WindowsSecureBrowser.Tray;
+using WindowsSecureBrowser.UI;
 
 namespace WindowsSecureBrowser
 {
@@ -27,13 +28,17 @@ namespace WindowsSecureBrowser
         private readonly ScreenshotManager _screenshotManager = new ScreenshotManager();
         private readonly OCRManager _ocrManager = new OCRManager();
         private readonly AppSettingsManager _appSettings = new AppSettingsManager();
+        private readonly ThemeManager _themeManager;
 
         private CoreWebView2Environment? _activeEnvironment;
         private TaskCompletionSource<bool>? _notificationDialogTask;
 
         public MainWindow()
         {
+            _isInitializingTheme = true;
             InitializeComponent();
+            _themeManager = new ThemeManager(this);
+            _isInitializingTheme = false;
 
             Loaded += MainWindow_Loaded;
             Closing += MainWindow_Closing;
@@ -41,8 +46,11 @@ namespace WindowsSecureBrowser
 
         private async void MainWindow_Loaded(object sender, RoutedEventArgs e)
         {
-            // 0. Load saved App Settings (Opacity, Theme)
+            // 0. Load saved App Settings (Opacity, Theme, Startup Size, Zoom)
             _appSettings.LoadConfig();
+            this.Width = (_appSettings.StartupWidth >= 200) ? _appSettings.StartupWidth : 600;
+            this.Height = (_appSettings.StartupHeight >= 150) ? _appSettings.StartupHeight : 470;
+
             if (_appSettings.WindowOpacity >= 0.1 && _appSettings.WindowOpacity <= 1.0)
             {
                 ApplyWindowOpacity(_appSettings.WindowOpacity);
@@ -181,6 +189,44 @@ namespace WindowsSecureBrowser
                     OuterWindowBorder.BorderThickness = new Thickness(1.5);
                 }
             }
+
+            double w = e.NewSize.Width;
+
+            // 1. Responsive Toolbar Action Collapse
+            if (ToolbarActionsPanel != null && btnOverflowMenu != null)
+            {
+                if (w < 780)
+                {
+                    ToolbarActionsPanel.Visibility = Visibility.Collapsed;
+                    btnOverflowMenu.Visibility = Visibility.Visible;
+                }
+                else
+                {
+                    ToolbarActionsPanel.Visibility = Visibility.Visible;
+                    btnOverflowMenu.Visibility = Visibility.Collapsed;
+                    if (OverflowMenuModal != null) OverflowMenuModal.Visibility = Visibility.Collapsed;
+                }
+            }
+
+
+
+            // 3. Responsive Nav Buttons in Address Toolbar
+            if (btnForward != null && btnHome != null)
+            {
+                if (w < 480)
+                {
+                    btnForward.Visibility = Visibility.Collapsed;
+                    btnHome.Visibility = Visibility.Collapsed;
+                }
+                else
+                {
+                    btnForward.Visibility = Visibility.Visible;
+                    btnHome.Visibility = Visibility.Visible;
+                }
+            }
+
+            // 4. Update Tab Header Widths
+            UpdateTabHeaderWidths();
         }
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)
@@ -203,10 +249,13 @@ namespace WindowsSecureBrowser
         {
             if (GoogleAccountModal != null && GoogleAccountModal != activeModal) GoogleAccountModal.Visibility = Visibility.Collapsed;
             if (BookmarksModal != null && BookmarksModal != activeModal) BookmarksModal.Visibility = Visibility.Collapsed;
+            if (DownloadsModal != null && DownloadsModal != activeModal) DownloadsModal.Visibility = Visibility.Collapsed;
+            if (ProxyModal != null && ProxyModal != activeModal) ProxyModal.Visibility = Visibility.Collapsed;
             if (ScreenshotModal != null && ScreenshotModal != activeModal) ScreenshotModal.Visibility = Visibility.Collapsed;
             if (SettingsModal != null && SettingsModal != activeModal) SettingsModal.Visibility = Visibility.Collapsed;
             if (HelpModal != null && HelpModal != activeModal) HelpModal.Visibility = Visibility.Collapsed;
             if (NotificationModal != null && NotificationModal != activeModal) NotificationModal.Visibility = Visibility.Collapsed;
+            if (OverflowMenuModal != null && OverflowMenuModal != activeModal) OverflowMenuModal.Visibility = Visibility.Collapsed;
         }
 
         private void UpdateModalVisibilities()
@@ -214,10 +263,13 @@ namespace WindowsSecureBrowser
             // WPF Airspace fix: Hide native WebView2 HWND when WPF overlay modals are active
             bool isAnyModalOpen = (GoogleAccountModal.Visibility == Visibility.Visible) ||
                                   (BookmarksModal.Visibility == Visibility.Visible) ||
+                                  (DownloadsModal != null && DownloadsModal.Visibility == Visibility.Visible) ||
+                                  (ProxyModal != null && ProxyModal.Visibility == Visibility.Visible) ||
                                   (ScreenshotModal.Visibility == Visibility.Visible) ||
                                   (SettingsModal.Visibility == Visibility.Visible) ||
                                   (HelpModal.Visibility == Visibility.Visible) ||
-                                  (NotificationModal.Visibility == Visibility.Visible);
+                                  (NotificationModal.Visibility == Visibility.Visible) ||
+                                  (OverflowMenuModal.Visibility == Visibility.Visible);
 
             WebViewHostGrid.Visibility = isAnyModalOpen ? Visibility.Hidden : Visibility.Visible;
         }
@@ -227,7 +279,6 @@ namespace WindowsSecureBrowser
             try
             {
                 var profile = _browserManager.ProfileManager.CurrentProfile;
-                txtProfileName.Text = profile.IsGuest ? "Profile Khách" : "Tài khoản Google";
                 _activeEnvironment = await _browserManager.CreateEnvironmentForProfileAsync(profile);
 
                 var tabs = _browserManager.TabManager.Tabs.ToArray();
@@ -262,7 +313,7 @@ namespace WindowsSecureBrowser
 
                 WebViewHostGrid.Children.Add(newWebView);
 
-                await _webViewManager.InitializeWebViewAsync(newWebView, _activeEnvironment, url, _browserManager.ProfileManager.CurrentProfile);
+                await _webViewManager.InitializeWebViewAsync(newWebView, _activeEnvironment, url, _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
 
                 newWebView.CoreWebView2.SourceChanged += (s, e) =>
                 {
@@ -280,7 +331,14 @@ namespace WindowsSecureBrowser
                     UpdateTabHeaderUI(tab);
                 };
 
+                newWebView.CoreWebView2.NavigationCompleted += (s, e) =>
+                {
+                    ApplyThemeToTab(tab);
+                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.3, 3.0); } catch { }
+                };
+
                 _browserManager.DownloadManager.RegisterDownloadEvents(newWebView.CoreWebView2);
+                ApplyThemeToTab(tab);
             }
             catch (Exception ex)
             {
@@ -295,7 +353,7 @@ namespace WindowsSecureBrowser
             if (_activeEnvironment == null) return;
 
             var tab = _browserManager.TabManager.CreateTab(url);
-            await _webViewManager.InitializeWebViewAsync(tab.WebView, _activeEnvironment, url, _browserManager.ProfileManager.CurrentProfile);
+            await _webViewManager.InitializeWebViewAsync(tab.WebView, _activeEnvironment, url, _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
             
             tab.WebView.CoreWebView2.SourceChanged += (s, e) =>
             {
@@ -313,7 +371,14 @@ namespace WindowsSecureBrowser
                 UpdateTabHeaderUI(tab);
             };
 
+            tab.WebView.CoreWebView2.NavigationCompleted += (s, e) =>
+            {
+                ApplyThemeToTab(tab);
+                try { if (_appSettings != null) tab.WebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.3, 3.0); } catch { }
+            };
+
             _browserManager.DownloadManager.RegisterDownloadEvents(tab.WebView.CoreWebView2);
+            ApplyThemeToTab(tab);
         }
 
         private void BtnNewTab_Click(object sender, RoutedEventArgs e)
@@ -340,8 +405,84 @@ namespace WindowsSecureBrowser
             };
 
             btnTab.Click += (s, e) => _browserManager.TabManager.SelectTab(tab);
+
+            btnTab.MouseEnter += (s, e) =>
+            {
+                bool isLight = string.Equals(_appSettings?.ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
+                var activeTab = _browserManager.TabManager.ActiveTab;
+                bool isActive = (btnTab.Tag == activeTab);
+
+                if (!isActive)
+                {
+                    if (isLight)
+                    {
+                        btnTab.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
+                        btnTab.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
+                        btnTab.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+                    }
+                    else
+                    {
+                        btnTab.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
+                        btnTab.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252));
+                        btnTab.BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
+                    }
+
+                    if (btnTab.Content is Grid grid)
+                    {
+                        foreach (var child in grid.Children)
+                        {
+                            if (child is TextBlock txtTitle)
+                            {
+                                txtTitle.Foreground = btnTab.Foreground;
+                            }
+                        }
+                    }
+                }
+            };
+
+            btnTab.MouseLeave += (s, e) =>
+            {
+                UpdateAllTabStyles();
+            };
+
             TabContainer.Children.Add(btnTab);
             UpdateAllTabStyles();
+        }
+
+        private double GetTargetTabTitleWidth()
+        {
+            double windowWidth = this.ActualWidth > 0 ? this.ActualWidth : 600;
+            int tabCount = TabContainer?.Children?.Count ?? 1;
+            if (tabCount <= 0) tabCount = 1;
+
+            // Compute available horizontal space for tab titles
+            // Window width minus window controls & margins (~110px) minus tab close buttons/padding (~28px per tab)
+            double availableTabSpace = Math.Max(40, windowWidth - 110 - (tabCount * 28));
+            double targetWidth = availableTabSpace / tabCount;
+
+            // Maximum title width when few tabs exist
+            double maxWidth = windowWidth < 480 ? 60 : (windowWidth < 700 ? 80 : 110);
+            // Minimum title width when many tabs exist so tabs shrink narrow
+            double minWidth = tabCount >= 6 ? 20 : (tabCount >= 3 ? 30 : 45);
+
+            return Math.Clamp(targetWidth, minWidth, maxWidth);
+        }
+
+        private void UpdateTabHeaderWidths()
+        {
+            if (TabContainer == null) return;
+            double targetWidth = GetTargetTabTitleWidth();
+
+            foreach (UIElement elem in TabContainer.Children)
+            {
+                if (elem is System.Windows.Controls.Button btn && btn.Content is Grid grid)
+                {
+                    if (grid.ColumnDefinitions.Count > 0)
+                    {
+                        grid.ColumnDefinitions[0].Width = new GridLength(targetWidth);
+                    }
+                }
+            }
         }
 
         private UIElement CreateTabHeaderContent(BrowserTab tab)
@@ -350,7 +491,7 @@ namespace WindowsSecureBrowser
             {
                 VerticalAlignment = System.Windows.VerticalAlignment.Center
             };
-            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(120) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(GetTargetTabTitleWidth()) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
             var txtTitle = new TextBlock
@@ -384,6 +525,21 @@ namespace WindowsSecureBrowser
                 _browserManager.TabManager.CloseTab(tab);
             };
 
+            btnClose.MouseEnter += (s, e) =>
+            {
+                btnClose.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(239, 68, 68));
+                btnClose.Foreground = System.Windows.Media.Brushes.White;
+            };
+
+            btnClose.MouseLeave += (s, e) =>
+            {
+                bool isLight = string.Equals(_appSettings?.ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
+                btnClose.Background = System.Windows.Media.Brushes.Transparent;
+                btnClose.Foreground = isLight ?
+                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139)) :
+                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+            };
+
             Grid.SetColumn(txtTitle, 0);
             Grid.SetColumn(btnClose, 1);
             grid.Children.Add(txtTitle);
@@ -415,70 +571,44 @@ namespace WindowsSecureBrowser
 
         private void UpdateAllTabStyles()
         {
-            bool isLight = string.Equals(_appSettings?.ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
-            var activeTab = _browserManager.TabManager.ActiveTab;
-
-            foreach (UIElement elem in TabContainer.Children)
-            {
-                if (elem is System.Windows.Controls.Button btn)
-                {
-                    bool isActive = (btn.Tag == activeTab);
-
-                    if (isLight)
-                    {
-                        btn.Background = isActive ?
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(255, 255, 255)) :
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(226, 232, 240));
-
-                        btn.Foreground = isActive ?
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42)) :
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(71, 85, 105));
-
-                        btn.BorderBrush = isActive ?
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(14, 165, 233)) :
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(203, 213, 225));
-                    }
-                    else
-                    {
-                        btn.Background = isActive ?
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(51, 65, 85)) :
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42));
-
-                        btn.Foreground = isActive ?
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)) :
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
-
-                        btn.BorderBrush = isActive ?
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(56, 189, 248)) :
-                            new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59));
-                    }
-
-                    if (btn.Content is Grid grid)
-                    {
-                        foreach (var child in grid.Children)
-                        {
-                            if (child is TextBlock txtTitle)
-                            {
-                                txtTitle.Foreground = btn.Foreground;
-                            }
-                            else if (child is System.Windows.Controls.Button btnClose)
-                            {
-                                btnClose.Foreground = isLight ?
-                                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(100, 116, 139)) :
-                                    new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
-                            }
-                        }
-                    }
-                }
-            }
+            UpdateTabHeaderWidths();
+            string mode = _appSettings?.ThemeMode ?? "Dark";
+            _themeManager?.UpdateAllTabStyles(TabContainer, _browserManager?.TabManager?.ActiveTab, mode, _currentWindowOpacity);
         }
 
-        private void TabManager_TabSelected(object? sender, BrowserTab tab)
+        private async void TabManager_TabSelected(object? sender, BrowserTab tab)
         {
             WebViewHostGrid.Children.Clear();
             WebViewHostGrid.Children.Add(tab.WebView);
             txtAddressBar.Text = tab.Url;
             UpdateAllTabStyles();
+
+            // Background Tab RAM & CPU Optimization: Suspend inactive tabs and set memory level low
+            if (_browserManager?.TabManager?.Tabs != null)
+            {
+                foreach (var t in _browserManager.TabManager.Tabs)
+                {
+                    try
+                    {
+                        if (t.WebView != null && t.WebView.CoreWebView2 != null)
+                        {
+                            if (t == tab)
+                            {
+                                t.WebView.CoreWebView2.MemoryUsageTargetLevel = Microsoft.Web.WebView2.Core.CoreWebView2MemoryUsageTargetLevel.Normal;
+                                t.WebView.CoreWebView2.Resume();
+                            }
+                            else
+                            {
+                                t.WebView.CoreWebView2.MemoryUsageTargetLevel = Microsoft.Web.WebView2.Core.CoreWebView2MemoryUsageTargetLevel.Low;
+                                _ = t.WebView.CoreWebView2.TrySuspendAsync();
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+
+            _ = UpdateProxyStatusBadgeAsync(tab);
         }
 
         private void TabManager_TabClosed(object? sender, BrowserTab tab)
@@ -585,127 +715,6 @@ namespace WindowsSecureBrowser
             {
                 txtStatus.Text = "Đang về Trang chủ Google...";
                 _webViewManager.Navigate(active.WebView, "https://www.google.com");
-            }
-        }
-        #endregion
-
-        #region Bookmarks Manager Modal & Handlers
-        private void ToggleBookmarksModal()
-        {
-            bool wasOpen = BookmarksModal.Visibility == Visibility.Visible;
-            CloseAllModalsExcept(wasOpen ? null : BookmarksModal);
-            BookmarksModal.Visibility = wasOpen ? Visibility.Collapsed : Visibility.Visible;
-            if (BookmarksModal.Visibility == Visibility.Visible)
-            {
-                RefreshBookmarksListUI();
-            }
-            UpdateModalVisibilities();
-        }
-
-        private void BtnBookmark_Click(object sender, RoutedEventArgs e)
-        {
-            ToggleBookmarksModal();
-        }
-
-        private void BtnCloseBookmarksModal_Click(object sender, RoutedEventArgs e)
-        {
-            ToggleBookmarksModal();
-        }
-
-        private void BtnAddCurrentBookmark_Click(object sender, RoutedEventArgs e)
-        {
-            var active = _browserManager.TabManager.ActiveTab;
-            if (active != null && !string.IsNullOrWhiteSpace(active.Url))
-            {
-                _browserManager.ProfileManager.AddBookmark(active.Url);
-                RefreshBookmarksListUI();
-                txtStatus.Text = $"Đã lưu Bookmark: {active.Url}";
-            }
-        }
-
-        private void RefreshBookmarksListUI()
-        {
-            BookmarksListContainer.Children.Clear();
-            var bookmarks = _browserManager.ProfileManager.CurrentProfile.Bookmarks;
-
-            if (bookmarks == null || bookmarks.Count == 0)
-            {
-                BookmarksListContainer.Children.Add(new TextBlock
-                {
-                    Text = "Chưa có trang yêu thích nào được lưu. Bấm '+ Lưu Trang Hiện Tại' để thêm.",
-                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184)),
-                    FontSize = 12,
-                    Margin = new Thickness(0, 10, 0, 10),
-                    TextWrapping = TextWrapping.Wrap
-                });
-                return;
-            }
-
-            foreach (var url in bookmarks)
-            {
-                var grid = new Grid { Margin = new Thickness(0, 0, 0, 6) };
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-                grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-                var txtUrl = new TextBlock
-                {
-                    Text = url,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    ToolTip = url,
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-
-                var btnUrl = new System.Windows.Controls.Button
-                {
-                    Content = txtUrl,
-                    HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left,
-                    Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(30, 41, 59)),
-                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 250, 252)),
-                    BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(51, 65, 85)),
-                    BorderThickness = new Thickness(1),
-                    Padding = new Thickness(12, 6, 12, 6),
-                    Height = 36,
-                    FontSize = 12
-                };
-                string targetUrl = url;
-                btnUrl.Click += (s, e) =>
-                {
-                    var active = _browserManager.TabManager.ActiveTab;
-                    if (active != null)
-                    {
-                        _webViewManager.Navigate(active.WebView, targetUrl);
-                    }
-                    BookmarksModal.Visibility = Visibility.Collapsed;
-                    UpdateModalVisibilities();
-                };
-
-                var btnDelete = new System.Windows.Controls.Button
-                {
-                    Content = "✕",
-                    ToolTip = "Xóa trang khỏi danh sách yêu thích",
-                    Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(15, 23, 42)),
-                    Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 113, 113)),
-                    BorderBrush = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(51, 65, 85)),
-                    BorderThickness = new Thickness(1),
-                    Margin = new Thickness(6, 0, 0, 0),
-                    Padding = new Thickness(10, 0, 10, 0),
-                    Height = 36,
-                    FontSize = 12,
-                    FontWeight = FontWeights.Bold
-                };
-                btnDelete.Click += (s, e) =>
-                {
-                    _browserManager.ProfileManager.CurrentProfile.Bookmarks.Remove(targetUrl);
-                    _browserManager.ProfileManager.SaveProfile(_browserManager.ProfileManager.CurrentProfile);
-                    RefreshBookmarksListUI();
-                };
-
-                Grid.SetColumn(btnUrl, 0);
-                Grid.SetColumn(btnDelete, 1);
-                grid.Children.Add(btnUrl);
-                grid.Children.Add(btnDelete);
-
-                BookmarksListContainer.Children.Add(grid);
             }
         }
         #endregion
@@ -992,12 +1001,12 @@ namespace WindowsSecureBrowser
             ShowAppNotification("Đã chuyển sang Profile Khách (Không lưu lịch sử/cookie).", "Profile Khách Hoạt Động");
         }
 
-        private void BtnClearGoogleCache_Click(object sender, RoutedEventArgs e)
+        private async void BtnClearGoogleCache_Click(object sender, RoutedEventArgs e)
         {
             GoogleAccountModal.Visibility = Visibility.Collapsed;
             UpdateModalVisibilities();
-            SecureClearManager.ClearSensitiveData();
-            ShowAppNotification("Đã xóa sạch Cookie và Bộ nhớ đệm Google!", "Đã Dọn Dẹp");
+            await SecureClearManager.ClearCookiesAndSessionDataAsync(_browserManager);
+            ShowAppNotification("Đã xóa sạch Cookie, Session Storage, LocalStorage & Cache thành công!", "Đã Dọn Dẹp Sạch Sẽ");
         }
         #endregion
 
@@ -1007,11 +1016,219 @@ namespace WindowsSecureBrowser
 
 
         #region Action Buttons & Settings
+        private void BtnBookmark_Click(object sender, RoutedEventArgs e)
+        {
+            bool wasOpen = BookmarksModal.Visibility == Visibility.Visible;
+            CloseAllModalsExcept(wasOpen ? null : BookmarksModal);
+            BookmarksModal.Visibility = wasOpen ? Visibility.Collapsed : Visibility.Visible;
+            if (BookmarksModal.Visibility == Visibility.Visible)
+            {
+                RefreshBookmarksUI();
+            }
+            UpdateModalVisibilities();
+        }
+
+        private void BtnCloseBookmarksModal_Click(object sender, RoutedEventArgs e)
+        {
+            BookmarksModal.Visibility = Visibility.Collapsed;
+            UpdateModalVisibilities();
+        }
+
+        private void BtnAddCurrentBookmark_Click(object sender, RoutedEventArgs e)
+        {
+            var active = _browserManager.TabManager.ActiveTab;
+            if (active != null && !string.IsNullOrWhiteSpace(active.Url))
+            {
+                _browserManager.ProfileManager.AddBookmark(active.Url);
+                RefreshBookmarksUI();
+                ShowAppNotification($"Đã thêm trang vào Danh sách Yêu thích:\n{active.Url}", "★ Thêm Thành Công");
+            }
+        }
+
+        private void RefreshBookmarksUI()
+        {
+            if (BookmarksListContainer == null) return;
+            BookmarksListContainer.Children.Clear();
+
+            var bookmarks = _browserManager.ProfileManager.CurrentProfile.Bookmarks;
+            if (bookmarks.Count == 0)
+            {
+                BookmarksListContainer.Children.Add(new TextBlock
+                {
+                    Text = "Chưa có trang yêu thích nào.",
+                    FontSize = 11,
+                    Opacity = 0.7,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 10, 0, 10)
+                });
+                return;
+            }
+
+            bool isLight = string.Equals(_appSettings?.ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
+
+            foreach (var url in bookmarks)
+            {
+                var card = new Border
+                {
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(8, 4, 8, 4),
+                    Margin = new Thickness(0, 0, 0, 4),
+                    BorderThickness = new Thickness(1),
+                    Background = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(241, 245, 249) : System.Windows.Media.Color.FromRgb(30, 41, 59)),
+                    BorderBrush = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225) : System.Windows.Media.Color.FromRgb(51, 65, 85))
+                };
+
+                var dock = new DockPanel();
+
+                var btnDelete = new System.Windows.Controls.Button
+                {
+                    Content = "🗑",
+                    Width = 22,
+                    Height = 22,
+                    Padding = new Thickness(0),
+                    FontSize = 10,
+                    ToolTip = "Xóa khỏi danh sách"
+                };
+                DockPanel.SetDock(btnDelete, Dock.Right);
+
+                string currentUrl = url;
+                btnDelete.Click += (s, e) =>
+                {
+                    _browserManager.ProfileManager.RemoveBookmark(currentUrl);
+                    RefreshBookmarksUI();
+                };
+
+                var btnNav = new System.Windows.Controls.Button
+                {
+                    Content = currentUrl,
+                    HorizontalContentAlignment = System.Windows.HorizontalAlignment.Left,
+                    Padding = new Thickness(4, 2, 4, 2),
+                    FontSize = 11,
+                    Margin = new Thickness(0, 0, 4, 0)
+                };
+                btnNav.Click += (s, e) =>
+                {
+                    BookmarksModal.Visibility = Visibility.Collapsed;
+                    UpdateModalVisibilities();
+                    var active = _browserManager.TabManager.ActiveTab;
+                    if (active != null)
+                    {
+                        _webViewManager.Navigate(active.WebView, currentUrl);
+                    }
+                };
+
+                dock.Children.Add(btnDelete);
+                dock.Children.Add(btnNav);
+                card.Child = dock;
+
+                BookmarksListContainer.Children.Add(card);
+            }
+        }
+
         private void BtnDownloads_Click(object sender, RoutedEventArgs e)
         {
-            ShowAppNotification(
-                $"Thư mục Tải xuống: {_browserManager.DownloadManager.DefaultDownloadPath}\nSố file đang tải: {_browserManager.DownloadManager.Downloads.Count}",
-                "Trình Quản Lý Tải Xuống");
+            bool wasOpen = DownloadsModal.Visibility == Visibility.Visible;
+            CloseAllModalsExcept(wasOpen ? null : DownloadsModal);
+            DownloadsModal.Visibility = wasOpen ? Visibility.Collapsed : Visibility.Visible;
+            if (DownloadsModal.Visibility == Visibility.Visible)
+            {
+                RefreshDownloadsUI();
+            }
+            UpdateModalVisibilities();
+        }
+
+        private void BtnCloseDownloadsModal_Click(object sender, RoutedEventArgs e)
+        {
+            DownloadsModal.Visibility = Visibility.Collapsed;
+            UpdateModalVisibilities();
+        }
+
+        private void BtnOpenDownloadsFolder_Click(object sender, RoutedEventArgs e)
+        {
+            _browserManager.DownloadManager.OpenDownloadFolder();
+        }
+
+        private void RefreshDownloadsUI()
+        {
+            if (DownloadsListContainer == null) return;
+            DownloadsListContainer.Children.Clear();
+
+            var downloads = _browserManager.DownloadManager.Downloads;
+            if (downloads.Count == 0)
+            {
+                DownloadsListContainer.Children.Add(new TextBlock
+                {
+                    Text = "Chưa có file nào được tải xuống.",
+                    FontSize = 11,
+                    Opacity = 0.7,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    Margin = new Thickness(0, 10, 0, 10)
+                });
+                return;
+            }
+
+            bool isLight = string.Equals(_appSettings?.ThemeMode, "Light", StringComparison.OrdinalIgnoreCase);
+
+            foreach (var item in downloads.Reverse())
+            {
+                var card = new Border
+                {
+                    CornerRadius = new CornerRadius(6),
+                    Padding = new Thickness(8, 6, 8, 6),
+                    Margin = new Thickness(0, 0, 0, 6),
+                    BorderThickness = new Thickness(1),
+                    Background = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(241, 245, 249) : System.Windows.Media.Color.FromRgb(30, 41, 59)),
+                    BorderBrush = new System.Windows.Media.SolidColorBrush(isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225) : System.Windows.Media.Color.FromRgb(51, 65, 85))
+                };
+
+                var grid = new Grid();
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+                var txtName = new TextBlock
+                {
+                    Text = $"📄 {item.FileName}",
+                    FontSize = 11,
+                    FontWeight = FontWeights.Bold,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    ToolTip = item.ResultFilePath
+                };
+                Grid.SetRow(txtName, 0);
+
+                var buttonsPanel = new StackPanel
+                {
+                    Orientation = System.Windows.Controls.Orientation.Horizontal,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Right,
+                    Margin = new Thickness(0, 4, 0, 0)
+                };
+                Grid.SetRow(buttonsPanel, 1);
+
+                var btnOpenFile = new System.Windows.Controls.Button
+                {
+                    Content = "📄 Mở File",
+                    FontSize = 10,
+                    Padding = new Thickness(6, 2, 6, 2),
+                    Margin = new Thickness(0, 0, 4, 0)
+                };
+                btnOpenFile.Click += (s, e) => _browserManager.DownloadManager.OpenFile(item.ResultFilePath);
+
+                var btnShowFolder = new System.Windows.Controls.Button
+                {
+                    Content = "📂 Xem Thư Mục",
+                    FontSize = 10,
+                    Padding = new Thickness(6, 2, 6, 2)
+                };
+                btnShowFolder.Click += (s, e) => _browserManager.DownloadManager.ShowInFolder(item.ResultFilePath);
+
+                buttonsPanel.Children.Add(btnOpenFile);
+                buttonsPanel.Children.Add(btnShowFolder);
+
+                grid.Children.Add(txtName);
+                grid.Children.Add(buttonsPanel);
+                card.Child = grid;
+
+                DownloadsListContainer.Children.Add(card);
+            }
         }
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
@@ -1023,8 +1240,14 @@ namespace WindowsSecureBrowser
             {
                 txtCleanupStatus.Text = "";
                 if (txtSaveSettingsStatus != null) txtSaveSettingsStatus.Text = "";
-                sldOpacity.Value = this.Opacity;
-                txtOpacityPercent.Text = $"{(int)(this.Opacity * 100)}% ({((this.Opacity >= 0.98) ? "Không Trong Suốt" : "Glass Mode")})";
+                sldOpacity.Value = _currentWindowOpacity;
+                txtOpacityPercent.Text = $"{(int)(_currentWindowOpacity * 100)}% ({((_currentWindowOpacity >= 0.98) ? "Không Trong Suốt" : "Glass Mode")})";
+
+                if (txtStartupWidth != null) txtStartupWidth.Text = _appSettings.StartupWidth.ToString();
+                if (txtStartupHeight != null) txtStartupHeight.Text = _appSettings.StartupHeight.ToString();
+                if (sldZoom != null) sldZoom.Value = _appSettings.ZoomFactor;
+                if (txtZoomPercent != null) txtZoomPercent.Text = $"{(int)(_appSettings.ZoomFactor * 100)}%";
+                if (chkMuteAudio != null) chkMuteAudio.IsChecked = _appSettings.IsAudioMuted;
             }
             UpdateModalVisibilities();
         }
@@ -1034,6 +1257,275 @@ namespace WindowsSecureBrowser
             SettingsModal.Visibility = Visibility.Collapsed;
             UpdateModalVisibilities();
         }
+
+        #region Proxy Modal & Tab Proxy Management
+        private void BtnProxyFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            ToggleProxyModal();
+        }
+
+        private void ToggleProxyModal()
+        {
+            bool wasOpen = ProxyModal.Visibility == Visibility.Visible;
+            CloseAllModalsExcept(wasOpen ? null : ProxyModal);
+            ProxyModal.Visibility = wasOpen ? Visibility.Collapsed : Visibility.Visible;
+            if (ProxyModal.Visibility == Visibility.Visible)
+            {
+                var active = _browserManager.TabManager.ActiveTab;
+                if (active != null)
+                {
+                    txtProxyInput.Text = active.Proxy?.RawInput ?? "";
+                    if (active.Proxy != null && active.Proxy.IsEnabled)
+                    {
+                        txtProxyStatus.Text = $"🌐 Proxy: {active.Proxy}";
+                        txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(74, 222, 128));
+                        BtnPingProxy_Click(this, new RoutedEventArgs());
+                    }
+                    else
+                    {
+                        txtProxyStatus.Text = "Chưa đặt Proxy cho Tab này";
+                        txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(148, 163, 184));
+                    }
+                }
+            }
+            UpdateModalVisibilities();
+        }
+
+        private void BtnCloseProxyModal_Click(object sender, RoutedEventArgs e)
+        {
+            ProxyModal.Visibility = Visibility.Collapsed;
+            UpdateModalVisibilities();
+        }
+
+        private async void BtnApplyProxy_Click(object sender, RoutedEventArgs e)
+        {
+            var active = _browserManager.TabManager.ActiveTab;
+            if (active == null) return;
+
+            string input = txtProxyInput.Text.Trim();
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                txtProxyStatus.Text = "⚠️ Vui lòng nhập Proxy (ip:port hoặc ip:port:user:pass)";
+                txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36));
+                return;
+            }
+
+            active.Proxy = ProxyModel.Parse(input);
+            await ApplyTabProxyAsync(active);
+            _ = UpdateProxyStatusBadgeAsync(active);
+
+            txtProxyStatus.Text = $"✅ Đã áp dụng Proxy: {active.Proxy}";
+            txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(74, 222, 128));
+            ShowAppNotification($"Đã áp dụng Proxy thành công cho Tab hiện tại:\n{active.Proxy}", "🌐 Áp Dụng Proxy");
+        }
+
+        private async void BtnPingProxy_Click(object sender, RoutedEventArgs e)
+        {
+            var active = _browserManager.TabManager.ActiveTab;
+            string input = txtProxyInput.Text.Trim();
+            var proxy = string.IsNullOrWhiteSpace(input) ? active?.Proxy : ProxyModel.Parse(input);
+
+            if (proxy == null || !proxy.IsEnabled)
+            {
+                txtProxyStatus.Text = "⚠️ Chưa nhập Proxy để test ping.";
+                txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36));
+                return;
+            }
+
+            txtProxyStatus.Text = $"⚡ Đang kết nối tới {proxy.Server}...";
+            txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(56, 189, 248));
+
+            var (host, port) = proxy.GetHostAndPort();
+            long ping = await ProxyPingHelper.PingProxyAsync(host, port);
+
+            if (ping > 0)
+            {
+                txtProxyStatus.Text = $"🟢 Proxy Hoạt Động tốt (Độ trễ Ping: {ping} ms)";
+                txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(74, 222, 128));
+            }
+            else
+            {
+                txtProxyStatus.Text = $"🔴 Proxy Không Phản Hồi (Timeout / Sai IP/Port)";
+                txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 113, 113));
+            }
+        }
+
+        private async void BtnClearProxy_Click(object sender, RoutedEventArgs e)
+        {
+            var active = _browserManager.TabManager.ActiveTab;
+            if (active == null) return;
+
+            active.Proxy = new ProxyModel();
+            txtProxyInput.Text = "";
+            await ApplyTabProxyAsync(active);
+            _ = UpdateProxyStatusBadgeAsync(active);
+
+            txtProxyStatus.Text = "❌ Đã tắt Proxy cho Tab hiện tại.";
+            txtProxyStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 113, 113));
+            ShowAppNotification("Đã tắt Proxy cho Tab hiện tại.", "Tắt Proxy");
+        }
+
+        private async System.Threading.Tasks.Task UpdateProxyStatusBadgeAsync(BrowserTab? tab)
+        {
+            if (txtProxyBadge == null) return;
+
+            if (tab == null || tab.Proxy == null || !tab.Proxy.IsEnabled)
+            {
+                txtProxyBadge.Visibility = Visibility.Collapsed;
+                txtProxyBadge.Text = "";
+                return;
+            }
+
+            txtProxyBadge.Visibility = Visibility.Visible;
+            txtProxyBadge.Text = $"🌐 Proxy: {tab.Proxy.Server} (⚡...)";
+            txtProxyBadge.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(56, 189, 248));
+
+            var (host, port) = tab.Proxy.GetHostAndPort();
+            long ping = await ProxyPingHelper.PingProxyAsync(host, port);
+            tab.PingMs = ping;
+
+            if (tab == _browserManager.TabManager.ActiveTab)
+            {
+                if (ping > 0)
+                {
+                    txtProxyBadge.Text = $"🌐 Proxy: {tab.Proxy.Server} (🟢 {ping}ms)";
+                    txtProxyBadge.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(74, 222, 128));
+                }
+                else
+                {
+                    txtProxyBadge.Text = $"🌐 Proxy: {tab.Proxy.Server} (🔴 Offline)";
+                    txtProxyBadge.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(248, 113, 113));
+                }
+            }
+        }
+
+        private async System.Threading.Tasks.Task ApplyTabProxyAsync(BrowserTab tab)
+        {
+            if (tab == null) return;
+
+            try
+            {
+                var profile = _browserManager.ProfileManager.CurrentProfile;
+                string? proxyServer = tab.Proxy != null && tab.Proxy.IsEnabled ? tab.Proxy.Server : null;
+                var env = await _browserManager.CreateEnvironmentForProfileAsync(profile, proxyServer);
+
+                await RecreateTabWebViewWithEnvironmentAsync(tab, env);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ApplyTabProxyAsync error: {ex.Message}");
+            }
+        }
+
+        private async System.Threading.Tasks.Task RecreateTabWebViewWithEnvironmentAsync(BrowserTab tab, Microsoft.Web.WebView2.Core.CoreWebView2Environment env)
+        {
+            if (tab == null || env == null) return;
+            string url = string.IsNullOrWhiteSpace(tab.Url) ? "https://www.google.com" : tab.Url;
+
+            try
+            {
+                if (tab.WebView != null)
+                {
+                    WebViewHostGrid.Children.Remove(tab.WebView);
+                    try { tab.WebView.Dispose(); } catch { }
+                }
+
+                var newWebView = new Microsoft.Web.WebView2.Wpf.WebView2();
+                tab.WebView = newWebView;
+
+                WebViewHostGrid.Children.Add(newWebView);
+
+                await _webViewManager.InitializeWebViewAsync(newWebView, env, url, _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
+
+                // Subscribe to BasicAuthenticationRequested for proxy user:pass
+                newWebView.CoreWebView2.BasicAuthenticationRequested += (sender, args) =>
+                {
+                    if (tab.Proxy != null && !string.IsNullOrEmpty(tab.Proxy.Username))
+                    {
+                        args.Response.UserName = tab.Proxy.Username;
+                        args.Response.Password = tab.Proxy.Password;
+                    }
+                };
+
+                newWebView.CoreWebView2.SourceChanged += (s, e) =>
+                {
+                    tab.Url = newWebView.Source.ToString();
+                    if (tab == _browserManager.TabManager.ActiveTab)
+                    {
+                        txtAddressBar.Text = tab.Url;
+                    }
+                    _browserManager.ProfileManager.AddHistory(tab.Url);
+                };
+
+                newWebView.CoreWebView2.DocumentTitleChanged += (s, e) =>
+                {
+                    tab.Title = newWebView.CoreWebView2.DocumentTitle;
+                    UpdateTabHeaderUI(tab);
+                };
+
+                newWebView.CoreWebView2.NavigationCompleted += (s, e) =>
+                {
+                    ApplyThemeToTab(tab);
+                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.3, 3.0); } catch { }
+                };
+
+                _browserManager.DownloadManager.RegisterDownloadEvents(newWebView.CoreWebView2);
+                ApplyThemeToTab(tab);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"RecreateTabWebViewWithEnvironmentAsync error: {ex.Message}");
+            }
+        }
+        #endregion
+
+        #region Overflow Menu Handlers
+        private void BtnOverflowMenu_Click(object sender, RoutedEventArgs e)
+        {
+            bool wasOpen = OverflowMenuModal.Visibility == Visibility.Visible;
+            CloseAllModalsExcept(wasOpen ? null : OverflowMenuModal);
+            OverflowMenuModal.Visibility = wasOpen ? Visibility.Collapsed : Visibility.Visible;
+            UpdateModalVisibilities();
+        }
+
+        private void BtnBookmarkFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            BtnBookmark_Click(sender, e);
+        }
+
+        private void BtnScreenshotFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            BtnScreenshot_Click(sender, e);
+        }
+
+        private void BtnDownloadsFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            BtnDownloads_Click(sender, e);
+        }
+
+        private void BtnSettingsFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            BtnSettings_Click(sender, e);
+        }
+
+        private void BtnHelpFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            BtnHelp_Click(sender, e);
+        }
+
+        private void BtnGoogleAccountFromOverflow_Click(object sender, RoutedEventArgs e)
+        {
+            OverflowMenuModal.Visibility = Visibility.Collapsed;
+            GoogleAccountModal.Visibility = Visibility.Visible;
+            UpdateModalVisibilities();
+        }
+        #endregion
 
         [System.Runtime.InteropServices.DllImport("user32.dll", SetLastError = true)]
         private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
@@ -1048,31 +1540,12 @@ namespace WindowsSecureBrowser
         private const int WS_EX_LAYERED = 0x80000;
         private const uint LWA_ALPHA = 0x00000002;
 
+        private double _currentWindowOpacity = 1.0;
+
         public void ApplyWindowOpacity(double opacity)
         {
-            this.Opacity = Math.Clamp(opacity, 0.15, 1.0);
-            try
-            {
-                IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-                if (hwnd != IntPtr.Zero)
-                {
-                    int extendedStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
-                    if (this.Opacity >= 0.98)
-                    {
-                        SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle & ~WS_EX_LAYERED);
-                    }
-                    else
-                    {
-                        SetWindowLong(hwnd, GWL_EXSTYLE, extendedStyle | WS_EX_LAYERED);
-                        byte alpha = (byte)(this.Opacity * 255);
-                        SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"ApplyWindowOpacity error: {ex.Message}");
-            }
+            _currentWindowOpacity = Math.Clamp(opacity, 0.15, 1.0);
+            this.Opacity = 1.0; // Keep WPF window at 1.0 so buttons and modals render 100% solid
 
             if (!_isInitializingTheme)
             {
@@ -1088,8 +1561,71 @@ namespace WindowsSecureBrowser
                 txtOpacityPercent.Text = $"{(int)(e.NewValue * 100)}% ({((e.NewValue >= 0.98) ? "Không Trong Suốt" : "Glass Mode")})";
                 if (txtSaveSettingsStatus != null)
                 {
-                    txtSaveSettingsStatus.Text = "⏳ Chưa lưu (Bấm 'Lưu Cấu Hình' để lưu)";
+                    txtSaveSettingsStatus.Text = "⏳ Chưa lưu";
                     txtSaveSettingsStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36));
+                }
+            }
+        }
+
+        private void SldZoom_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (txtZoomPercent != null)
+            {
+                txtZoomPercent.Text = $"{(int)(e.NewValue * 100)}%";
+                ApplyZoomFactor(e.NewValue);
+                if (txtSaveSettingsStatus != null)
+                {
+                    txtSaveSettingsStatus.Text = "⏳ Chưa lưu";
+                    txtSaveSettingsStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36));
+                }
+            }
+        }
+
+        public void ApplyZoomFactor(double zoom)
+        {
+            if (_browserManager?.TabManager?.Tabs != null)
+            {
+                foreach (var tab in _browserManager.TabManager.Tabs)
+                {
+                    try
+                    {
+                        if (tab.WebView != null)
+                        {
+                            tab.WebView.ZoomFactor = Math.Clamp(zoom, 0.3, 3.0);
+                        }
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        private void ChkMuteAudio_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isInitializingTheme || chkMuteAudio == null || _appSettings == null) return;
+            bool isMuted = chkMuteAudio.IsChecked == true;
+            ApplyAudioMuteSetting(isMuted);
+            _appSettings.IsAudioMuted = isMuted;
+            if (txtSaveSettingsStatus != null)
+            {
+                txtSaveSettingsStatus.Text = "⏳ Chưa lưu";
+                txtSaveSettingsStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(251, 191, 36));
+            }
+        }
+
+        public void ApplyAudioMuteSetting(bool isMuted)
+        {
+            if (_browserManager?.TabManager?.Tabs != null)
+            {
+                foreach (var tab in _browserManager.TabManager.Tabs)
+                {
+                    try
+                    {
+                        if (tab.WebView != null && tab.WebView.CoreWebView2 != null)
+                        {
+                            tab.WebView.CoreWebView2.IsMuted = isMuted;
+                        }
+                    }
+                    catch { }
                 }
             }
         }
@@ -1098,14 +1634,60 @@ namespace WindowsSecureBrowser
         {
             _appSettings.WindowOpacity = sldOpacity.Value;
             _appSettings.ThemeMode = (rbLightTheme?.IsChecked == true) ? "Light" : "Dark";
+
+            if (txtStartupWidth != null && double.TryParse(txtStartupWidth.Text, out double w) && w >= 200)
+            {
+                _appSettings.StartupWidth = w;
+                this.Width = w;
+            }
+            if (txtStartupHeight != null && double.TryParse(txtStartupHeight.Text, out double h) && h >= 150)
+            {
+                _appSettings.StartupHeight = h;
+                this.Height = h;
+            }
+
+            if (sldZoom != null)
+            {
+                _appSettings.ZoomFactor = sldZoom.Value;
+                ApplyZoomFactor(sldZoom.Value);
+            }
+
+            if (chkMuteAudio != null)
+            {
+                _appSettings.IsAudioMuted = chkMuteAudio.IsChecked == true;
+                ApplyAudioMuteSetting(_appSettings.IsAudioMuted);
+            }
+
             _appSettings.SaveConfig();
 
             if (txtSaveSettingsStatus != null)
             {
-                txtSaveSettingsStatus.Text = "✅ Đã lưu cấu hình độ trong suốt thành công!";
+                txtSaveSettingsStatus.Text = "✅ Đã lưu!";
                 txtSaveSettingsStatus.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(74, 222, 128));
             }
-            ShowAppNotification("Đã lưu giữ cấu hình độ trong suốt thành công!", "Đã Lưu Cài Đặt");
+            ShowAppNotification("Đã lưu cấu hình thành công!", "Đã Lưu Cài Đặt");
+        }
+
+        private void BtnPresetSize_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is System.Windows.Controls.Button btn && btn.Tag is string tagStr)
+            {
+                var parts = tagStr.Split(',');
+                if (parts.Length == 2 && txtStartupWidth != null && txtStartupHeight != null)
+                {
+                    txtStartupWidth.Text = parts[0];
+                    txtStartupHeight.Text = parts[1];
+                }
+            }
+        }
+
+        private void BtnPresetCurrentSize_Click(object sender, RoutedEventArgs e)
+        {
+            if (txtStartupWidth != null && txtStartupHeight != null)
+            {
+                txtStartupWidth.Text = Math.Round(this.ActualWidth).ToString();
+                txtStartupHeight.Text = Math.Round(this.ActualHeight).ToString();
+            }
         }
 
         private bool _isInitializingTheme = false;
@@ -1119,174 +1701,17 @@ namespace WindowsSecureBrowser
             _appSettings.SaveConfig();
         }
 
-        private void UpdateControlThemeRecursive(DependencyObject parent, System.Windows.Media.Brush fg, System.Windows.Media.Brush secondaryFg, System.Windows.Media.Brush cardBg, System.Windows.Media.Brush btnBg, System.Windows.Media.Brush btnFg, System.Windows.Media.Brush borderBrush)
-        {
-            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(parent);
-            for (int i = 0; i < count; i++)
-            {
-                var child = System.Windows.Media.VisualTreeHelper.GetChild(parent, i);
-
-                if (child is TextBlock tb)
-                {
-                    tb.Foreground = fg;
-                }
-                else if (child is System.Windows.Controls.RadioButton rb)
-                {
-                    rb.Foreground = fg;
-                }
-                else if (child is System.Windows.Controls.Button btn)
-                {
-                    btn.Background = btnBg;
-                    btn.Foreground = btnFg;
-                    btn.BorderBrush = borderBrush;
-                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, btnBg, btnFg, borderBrush);
-                }
-                else if (child is Border b && b.Name != "OuterWindowBorder" && b.Name != "GoogleAccountBadge")
-                {
-                    b.Background = cardBg;
-                    b.BorderBrush = borderBrush;
-                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, btnBg, btnFg, borderBrush);
-                }
-                else
-                {
-                    UpdateControlThemeRecursive(child, fg, secondaryFg, cardBg, btnBg, btnFg, borderBrush);
-                }
-            }
-        }
-
         private void ApplyTheme(string themeMode)
         {
-            if (_isInitializingTheme) return;
+            if (_isInitializingTheme || _themeManager == null) return;
             _isInitializingTheme = true;
             try
             {
-                bool isLight = string.Equals(themeMode, "Light", StringComparison.OrdinalIgnoreCase);
-                bool isGlass = this.Opacity < 0.98;
-
-                if (rbDarkTheme != null && rbLightTheme != null)
+                if (_appSettings != null)
                 {
-                    rbDarkTheme.IsChecked = !isLight;
-                    rbLightTheme.IsChecked = isLight;
-                }
-
-                byte mainAlpha = isGlass ? (byte)60 : (byte)255;
-                byte barAlpha = isGlass ? (byte)120 : (byte)255;
-
-                var bgMain = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromArgb(mainAlpha, 241, 245, 249)
-                            : System.Windows.Media.Color.FromArgb(mainAlpha, 11, 15, 25));
-
-                var bgPanel = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromRgb(255, 255, 255)
-                            : System.Windows.Media.Color.FromRgb(21, 29, 42));
-
-                var bgCard = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromRgb(241, 245, 249)
-                            : System.Windows.Media.Color.FromRgb(30, 41, 59));
-
-                var bgBar = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 226, 232, 240)
-                            : System.Windows.Media.Color.FromArgb(barAlpha, 6, 10, 18));
-
-                var bgToolbar = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromArgb(barAlpha, 241, 245, 249)
-                            : System.Windows.Media.Color.FromArgb(barAlpha, 21, 29, 42));
-
-                var btnBg = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromRgb(255, 255, 255)
-                            : System.Windows.Media.Color.FromRgb(30, 41, 59));
-
-                var btnFg = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42)
-                            : System.Windows.Media.Color.FromRgb(255, 255, 255));
-
-                var borderBrush = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromRgb(203, 213, 225)
-                            : System.Windows.Media.Color.FromRgb(51, 65, 85));
-
-                var textPrimary = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromRgb(15, 23, 42)
-                            : System.Windows.Media.Color.FromRgb(248, 250, 252));
-
-                var textSecondary = new System.Windows.Media.SolidColorBrush(
-                    isLight ? System.Windows.Media.Color.FromRgb(51, 65, 85)
-                            : System.Windows.Media.Color.FromRgb(203, 213, 225));
-
-                this.Foreground = textPrimary;
-                this.Background = isGlass ? System.Windows.Media.Brushes.Transparent : bgMain;
-
-                if (OuterWindowBorder != null)
-                {
-                    OuterWindowBorder.BorderBrush = new System.Windows.Media.SolidColorBrush(
-                        isLight ? System.Windows.Media.Color.FromRgb(14, 165, 233)
-                                : System.Windows.Media.Color.FromRgb(56, 189, 248));
-                }
-
-                if (RootGrid != null)
-                {
-                    RootGrid.Background = bgMain;
-                    UpdateControlThemeRecursive(RootGrid, textPrimary, textSecondary, bgCard, btnBg, btnFg, borderBrush);
-                }
-
-                if (TabBarHeader != null) TabBarHeader.Background = bgBar;
-                if (AddressBarToolbar != null) AddressBarToolbar.Background = bgToolbar;
-                if (StatusBarBorder != null) StatusBarBorder.Background = bgBar;
-
-                if (GoogleAccountBadge != null)
-                {
-                    GoogleAccountBadge.Background = btnBg;
-                    GoogleAccountBadge.BorderBrush = borderBrush;
-                }
-                if (txtProfileName != null) txtProfileName.Foreground = btnFg;
-
-                if (txtStatus != null) txtStatus.Foreground = textSecondary;
-                if (txtMemoryUsage != null) txtMemoryUsage.Foreground = textSecondary;
-
-                if (txtAddressBar != null)
-                {
-                    txtAddressBar.Background = new System.Windows.Media.SolidColorBrush(
-                        isLight ? System.Windows.Media.Color.FromRgb(255, 255, 255)
-                                : System.Windows.Media.Color.FromRgb(11, 15, 25));
-                    txtAddressBar.Foreground = textPrimary;
-                    txtAddressBar.BorderBrush = borderBrush;
-                }
-
-                Border[] modals = { SettingsModal, BookmarksModal, GoogleAccountModal, HelpModal, ScreenshotModal, NotificationModal };
-                foreach (var modal in modals)
-                {
-                    if (modal != null)
-                    {
-                        modal.Background = bgPanel;
-                        modal.BorderBrush = borderBrush;
-                        UpdateControlThemeRecursive(modal, textPrimary, textSecondary, bgCard, btnBg, btnFg, borderBrush);
-                    }
-                }
-
-                if (rbDarkTheme != null) rbDarkTheme.Foreground = textPrimary;
-                if (rbLightTheme != null) rbLightTheme.Foreground = textPrimary;
-
-                UpdateAllTabStyles();
-
-                if (_browserManager?.TabManager?.Tabs != null)
-                {
-                    try
-                    {
-                        var colorScheme = isLight ? Microsoft.Web.WebView2.Core.CoreWebView2PreferredColorScheme.Light : Microsoft.Web.WebView2.Core.CoreWebView2PreferredColorScheme.Dark;
-                        System.Drawing.Color webBg = isGlass ? System.Drawing.Color.Transparent : (isLight ? System.Drawing.Color.White : System.Drawing.Color.FromArgb(11, 15, 25));
-
-                        foreach (var tab in _browserManager.TabManager.Tabs)
-                        {
-                            if (tab.WebView != null)
-                            {
-                                tab.WebView.DefaultBackgroundColor = webBg;
-                                if (tab.WebView.CoreWebView2?.Profile != null)
-                                {
-                                    tab.WebView.CoreWebView2.Profile.PreferredColorScheme = colorScheme;
-                                }
-                            }
-                        }
-                    }
-                    catch { }
+                    _appSettings.ThemeMode = themeMode;
+                    Border[] modals = { SettingsModal, BookmarksModal, DownloadsModal, ProxyModal, GoogleAccountModal, HelpModal, ScreenshotModal, NotificationModal, OverflowMenuModal };
+                    _themeManager.ApplyTheme(themeMode, _currentWindowOpacity, _browserManager, _appSettings, modals);
                 }
             }
             finally
@@ -1295,16 +1720,22 @@ namespace WindowsSecureBrowser
             }
         }
 
-        private void BtnDoCleanup_Click(object sender, RoutedEventArgs e)
+        private void ApplyThemeToTab(BrowserTab tab)
         {
-            SecureClearManager.ClearSensitiveData();
+            _themeManager.ApplyThemeToTab(tab, _appSettings?.ThemeMode ?? "Dark", _currentWindowOpacity);
+        }
+
+        private async void BtnDoCleanup_Click(object sender, RoutedEventArgs e)
+        {
+            await SecureClearManager.ClearCookiesAndSessionDataAsync(_browserManager);
             UpdateMemoryDisplay();
-            txtCleanupStatus.Text = "✅ Đã giải phóng RAM & dọn dẹp cache bảo mật thành công!";
-            ShowAppNotification("Đã xóa an toàn toàn bộ RAM Bitmaps, Khay nhớ đệm riêng tư và Cache nhạy cảm!", "Đã Dọn Dẹp Bảo Mật");
+            txtCleanupStatus.Text = "✅ Đã xóa sạch Cookie, Session, RAM & Cache bảo mật!";
+            ShowAppNotification("Đã xóa an toàn toàn bộ Cookie, Session Storage, RAM Bitmaps & Cache nhạy cảm!", "Đã Dọn Dẹp Bảo Mật");
         }
 
         private void UpdateMemoryDisplay()
         {
+            ResourceManager.OptimizeMemory();
             txtMemoryUsage.Text = $"RAM: {ResourceManager.GetWorkingSetMemoryMB()} MB";
         }
         #endregion

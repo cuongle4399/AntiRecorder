@@ -1,10 +1,14 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace WindowsSecureBrowser.AppSystem
 {
     public class ResourceManager
     {
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetProcessWorkingSetSize(IntPtr hProcess, IntPtr dwMinimumWorkingSetSize, IntPtr dwMaximumWorkingSetSize);
+
         public static long GetWorkingSetMemoryMB()
         {
             using var proc = Process.GetCurrentProcess();
@@ -13,9 +17,16 @@ namespace WindowsSecureBrowser.AppSystem
 
         public static void OptimizeMemory()
         {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            GC.Collect();
+            try
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+
+                using var proc = Process.GetCurrentProcess();
+                SetProcessWorkingSetSize(proc.Handle, (IntPtr)(-1), (IntPtr)(-1));
+            }
+            catch { }
         }
     }
 }

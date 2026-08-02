@@ -8,12 +8,20 @@ namespace WindowsSecureBrowser.AppSystem
     {
         public double WindowOpacity { get; set; } = 1.0;
         public string ThemeMode { get; set; } = "Dark";
+        public double StartupWidth { get; set; } = 600;
+        public double StartupHeight { get; set; } = 470;
+        public double ZoomFactor { get; set; } = 1.0;
+        public bool IsAudioMuted { get; set; } = true;
     }
 
     public class AppSettingsManager
     {
         public double WindowOpacity { get; set; } = 1.0;
         public string ThemeMode { get; set; } = "Dark";
+        public double StartupWidth { get; set; } = 600;
+        public double StartupHeight { get; set; } = 470;
+        public double ZoomFactor { get; set; } = 1.0;
+        public bool IsAudioMuted { get; set; } = true;
 
         public void SaveConfig()
         {
@@ -22,7 +30,11 @@ namespace WindowsSecureBrowser.AppSystem
                 var model = new AppConfigModel
                 {
                     WindowOpacity = this.WindowOpacity,
-                    ThemeMode = this.ThemeMode
+                    ThemeMode = this.ThemeMode,
+                    StartupWidth = this.StartupWidth,
+                    StartupHeight = this.StartupHeight,
+                    ZoomFactor = this.ZoomFactor,
+                    IsAudioMuted = this.IsAudioMuted
                 };
                 string json = JsonSerializer.Serialize(model, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(AppDataPath.AppConfigFilePath, json);
@@ -52,6 +64,19 @@ namespace WindowsSecureBrowser.AppSystem
                         {
                             this.ThemeMode = model.ThemeMode;
                         }
+                        if (model.StartupWidth >= 200)
+                        {
+                            this.StartupWidth = model.StartupWidth;
+                        }
+                        if (model.StartupHeight >= 150)
+                        {
+                            this.StartupHeight = model.StartupHeight;
+                        }
+                        if (model.ZoomFactor >= 0.3 && model.ZoomFactor <= 3.0)
+                        {
+                            this.ZoomFactor = model.ZoomFactor;
+                        }
+                        this.IsAudioMuted = model.IsAudioMuted;
                     }
                 }
             }

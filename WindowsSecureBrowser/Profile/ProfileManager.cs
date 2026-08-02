@@ -78,6 +78,15 @@ namespace WindowsSecureBrowser.Profile
             }
         }
 
+        public void RemoveBookmark(string url)
+        {
+            if (CurrentProfile.Bookmarks.Contains(url))
+            {
+                CurrentProfile.Bookmarks.Remove(url);
+                SaveProfile(CurrentProfile);
+            }
+        }
+
         public void AddHistory(string url)
         {
             if (CurrentProfile.IsGuest) return;

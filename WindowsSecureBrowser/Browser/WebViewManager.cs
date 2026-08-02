@@ -8,7 +8,7 @@ namespace WindowsSecureBrowser.Browser
 {
     public class WebViewManager
     {
-        public async Task InitializeWebViewAsync(WebView2 webView, CoreWebView2Environment environment, string initialUrl, UserProfile? profile = null)
+        public async Task InitializeWebViewAsync(WebView2 webView, CoreWebView2Environment environment, string initialUrl, UserProfile? profile = null, bool isMuted = true)
         {
             webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
             await webView.EnsureCoreWebView2Async(environment);
@@ -20,22 +20,11 @@ namespace WindowsSecureBrowser.Browser
             webView.CoreWebView2.Settings.IsGeneralAutofillEnabled = true;
             webView.CoreWebView2.Settings.IsPasswordAutosaveEnabled = true;
             
-            // STRICT AUDIO PRIVACY: Force WebView2 instance to be 100% muted by default
-            webView.CoreWebView2.IsMuted = true;
-            webView.CoreWebView2.IsMutedChanged += (s, e) =>
-            {
-                // Re-enforce IsMuted = true even if web page or JS tries to unmute audio
-                if (!webView.CoreWebView2.IsMuted)
-                {
-                    webView.CoreWebView2.IsMuted = true;
-                }
-            };
+            // AUDIO PRIVACY: Set IsMuted based on app configuration (defaults to true)
+            webView.CoreWebView2.IsMuted = isMuted;
 
             webView.Source = new Uri(initialUrl);
         }
-
-
-
 
         public void Navigate(WebView2 webView, string targetUrl)
         {

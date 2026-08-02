@@ -13,6 +13,8 @@ namespace WindowsSecureBrowser.Browser
         public string Url { get; set; } = "https://www.google.com";
         public WebView2 WebView { get; set; } = null!;
         public bool IsActive { get; set; }
+        public ProxyModel Proxy { get; set; } = new ProxyModel();
+        public long PingMs { get; set; } = -1;
     }
 
     public class TabManager
