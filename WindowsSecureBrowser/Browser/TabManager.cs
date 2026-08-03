@@ -15,6 +15,12 @@ namespace WindowsSecureBrowser.Browser
         public bool IsActive { get; set; }
         public ProxyModel Proxy { get; set; } = new ProxyModel();
         public long PingMs { get; set; } = -1;
+
+        /// <summary>
+        /// True khi WebView2 đã bị dispose để giải phóng RAM (ví dụ khi app ẩn xuống tray).
+        /// URL được giữ lại để restore khi cần.
+        /// </summary>
+        public bool IsDiscarded { get; set; } = false;
     }
 
     public class TabManager

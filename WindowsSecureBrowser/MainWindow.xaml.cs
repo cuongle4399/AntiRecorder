@@ -32,6 +32,10 @@ namespace WindowsSecureBrowser
 
         private CoreWebView2Environment? _activeEnvironment;
 
+        // Guard flags cho Tray Discard — tránh race condition và screenshot mode trigger sai
+        private bool _isDiscarding = false;      // Đang trong quá trình dispose WebView2s
+        private bool _isTemporaryHide = false;   // App ẩn tạm để chụp screenshot (KHÔNG discard)
+
         public MainWindow()
         {
             _isInitializingTheme = true;
@@ -69,7 +73,26 @@ namespace WindowsSecureBrowser
             OSScreenshotDetector.Initialize(this);
             Activated += (s, e) => { this.ShowInTaskbar = false; HideFromAltTab(); if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
             StateChanged += (s, e) => { this.ShowInTaskbar = false; HideFromAltTab(); if (!WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
-            IsVisibleChanged += (s, e) => { this.ShowInTaskbar = false; HideFromAltTab(); if (IsVisible && !WindowProtection.IsProtectionDisabledTemporarily) WindowProtection.EnableCaptureProtection(this); };
+            IsVisibleChanged += async (s, e) =>
+            {
+                this.ShowInTaskbar = false;
+                HideFromAltTab();
+                if (IsVisible && !WindowProtection.IsProtectionDisabledTemporarily)
+                {
+                    WindowProtection.EnableCaptureProtection(this);
+                    // App hiện lại → restore tab đang active nếu đã bị discard
+                    var activeTab = _browserManager.TabManager.ActiveTab;
+                    if (activeTab?.IsDiscarded == true)
+                        await RestoreDiscardedTabAsync(activeTab);
+                }
+                else if (!IsVisible && !_isTemporaryHide && !_isDiscarding)
+                {
+                    // App ẩn xuống tray thật sự (F4) → dispose toàn bộ WebView2 giải phóng RAM
+                    // Guard: bỏ qua nếu đang ẩn tạm để chụp screenshot (_isTemporaryHide)
+                    //        hoặc đã đang trong quá trình discard (_isDiscarding)
+                    await DiscardAllWebViewsAsync();
+                }
+            };
 
             MouseEnter += (s, e) => { System.Windows.Input.Mouse.OverrideCursor = System.Windows.Input.Cursors.Arrow; };
             MouseLeave += (s, e) => { System.Windows.Input.Mouse.OverrideCursor = null; };
@@ -110,7 +133,13 @@ namespace WindowsSecureBrowser
                 AddNewTab("https://www.google.com");
             }
 
-            UpdateMemoryDisplay();
+            // Startup: chỉ hiện số RAM, không chạy GC — tránh làm chậm khởi động
+            txtMemoryUsage.Text = $"RAM: {ResourceManager.GetWorkingSetMemoryMB()} MB";
+
+            // 7. Periodic Background RAM Trim — chạy mỗi 5 phút, GC nhẹ (không Aggressive)
+            var memoryTimer = new DispatcherTimer { Interval = TimeSpan.FromMinutes(5) };
+            memoryTimer.Tick += async (s, e) => await ResourceManager.OptimizeMemoryAsync(aggressive: false);
+            memoryTimer.Start();
         }
 
         #region Window Event Handlers & Resizing (WM_NCHITTEST & WM_GETMINMAXINFO)
@@ -400,6 +429,10 @@ namespace WindowsSecureBrowser
 
                 await _webViewManager.InitializeWebViewAsync(newWebView, _activeEnvironment, url, _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
 
+                // STEALTH: Áp dụng WDA_EXCLUDEFROMCAPTURE ngay lập tức cho HWND mới
+                // Không đợi Background Scanner (độ trễ tối đa 1 giây)
+                WindowProtection.EnableCaptureProtection(this);
+
                 newWebView.CoreWebView2.SourceChanged += (s, e) =>
                 {
                     tab.Url = newWebView.Source.ToString();
@@ -439,7 +472,11 @@ namespace WindowsSecureBrowser
 
             var tab = _browserManager.TabManager.CreateTab(url);
             await _webViewManager.InitializeWebViewAsync(tab.WebView, _activeEnvironment, url, _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
-            
+
+            // STEALTH: Áp dụng WDA_EXCLUDEFROMCAPTURE ngay sau khi WebView2 khởi tạo xong
+            // Tab mới có HWND mới chưa được protect — gọi ngay, không đợi Scanner tick 1 giây
+            WindowProtection.EnableCaptureProtection(this);
+
             tab.WebView.CoreWebView2.SourceChanged += (s, e) =>
             {
                 tab.Url = tab.WebView.Source.ToString();
@@ -709,10 +746,18 @@ namespace WindowsSecureBrowser
 
         private async void TabManager_TabSelected(object? sender, BrowserTab tab)
         {
-            WebViewHostGrid.Children.Clear();
-            WebViewHostGrid.Children.Add(tab.WebView);
             txtAddressBar.Text = tab.Url;
             UpdateAllTabStyles();
+
+            // Lazy restore: nếu tab bị discard (WebView đã dispose), recreate trước khi hiển thị
+            if (tab.IsDiscarded)
+            {
+                await RestoreDiscardedTabAsync(tab);
+                return; // RestoreDiscardedTabAsync tự cập nhật visual tree
+            }
+
+            WebViewHostGrid.Children.Clear();
+            WebViewHostGrid.Children.Add(tab.WebView);
 
             // Background Tab RAM & CPU Optimization: Suspend inactive tabs and set memory level low
             if (_browserManager?.TabManager?.Tabs != null)
@@ -740,6 +785,120 @@ namespace WindowsSecureBrowser
             }
 
             _ = UpdateProxyStatusBadgeAsync(tab);
+        }
+
+        /// <summary>
+        /// Dispose toàn bộ WebView2 của tất cả tab để giải phóng RAM tối đa.
+        /// URL được giữ lại trong tab.Url để restore sau.
+        /// Gọi khi app ẩn xuống tray (F4).
+        /// </summary>
+        private async Task DiscardAllWebViewsAsync()
+        {
+            // Guard: tránh race condition nếu F4 được nhấn nhanh liên tiếp
+            if (_isDiscarding) return;
+            _isDiscarding = true;
+
+            try
+            {
+                // Xóa khỏi visual tree trước
+                WebViewHostGrid.Children.Clear();
+
+                foreach (var tab in _browserManager.TabManager.Tabs)
+                {
+                    try
+                    {
+                        if (tab.WebView != null)
+                        {
+                            tab.WebView.Dispose();
+                            tab.WebView = null!;
+                        }
+                        tab.IsDiscarded = true;
+                    }
+                    catch { }
+                }
+
+                // GC Aggressive: app đã ẩn, user không thấy gì — dùng chế độ mạnh nhất để giải phóng tối đa
+                await ResourceManager.OptimizeMemoryAsync(aggressive: true);
+            }
+            finally
+            {
+                _isDiscarding = false;
+            }
+        }
+
+        /// <summary>
+        /// Tạo lại WebView2 cho tab bị discard và navigate về URL cũ.
+        /// Gọi khi user hiện app lại (F4) hoặc click tab bị discard.
+        /// </summary>
+        private async Task RestoreDiscardedTabAsync(BrowserTab tab)
+        {
+            if (tab == null || _activeEnvironment == null) return;
+            if (!tab.IsDiscarded) return;
+
+            string url = string.IsNullOrWhiteSpace(tab.Url) ? "https://www.google.com" : tab.Url;
+            string savedTitle = tab.Title; // Lưu title cũ để restore nếu lỗi
+
+            try
+            {
+                // Hiện trạng thái loading trên tab header người dùng biết tab đang khởi động lại
+                tab.Title = "🔄 Đang tải...";
+                UpdateTabHeaderUI(tab);
+
+                // Tạo WebView2 mới
+                var newWebView = new Microsoft.Web.WebView2.Wpf.WebView2();
+                tab.WebView = newWebView;
+                tab.IsDiscarded = false;
+
+                // Initialize với environment hiện tại
+                await _webViewManager.InitializeWebViewAsync(newWebView, _activeEnvironment, url,
+                    _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
+
+                // STEALTH: Áp dụng WDA_EXCLUDEFROMCAPTURE ngay sau khi WebView2 mới khởi tạo
+                // HWND mới chưa được protect — gọi trước khi đưa vào visual tree
+                WindowProtection.EnableCaptureProtection(this);
+
+                // Đăng ký lại events
+                newWebView.CoreWebView2.SourceChanged += (s, e) =>
+                {
+                    tab.Url = newWebView.Source.ToString();
+                    if (tab == _browserManager.TabManager.ActiveTab)
+                        txtAddressBar.Text = tab.Url;
+                    _browserManager.ProfileManager.AddHistory(tab.Url);
+                };
+
+                newWebView.CoreWebView2.DocumentTitleChanged += (s, e) =>
+                {
+                    tab.Title = newWebView.CoreWebView2.DocumentTitle;
+                    UpdateTabHeaderUI(tab);
+                };
+
+                newWebView.CoreWebView2.NavigationCompleted += (s, e) =>
+                {
+                    ApplyThemeToTab(tab);
+                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.01, 3.0); } catch { }
+                };
+
+                _browserManager.DownloadManager.RegisterDownloadEvents(newWebView.CoreWebView2);
+
+                // Đưa vào visual tree nếu đây là tab đang active
+                if (tab == _browserManager.TabManager.ActiveTab)
+                {
+                    WebViewHostGrid.Children.Clear();
+                    WebViewHostGrid.Children.Add(newWebView);
+
+                    // STEALTH: Re-apply sau khi đưa vào visual tree (HWND có thể thay đổi sau khi attach)
+                    WindowProtection.EnableCaptureProtection(this);
+                }
+
+                ApplyThemeToTab(tab);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[RestoreDiscardedTab] Error: {ex.Message}");
+                tab.Title = savedTitle; // Restore title cũ nếu lỗi
+                tab.IsDiscarded = false;
+                UpdateTabHeaderUI(tab);
+            }
         }
 
         private void TabManager_TabClosed(object? sender, BrowserTab tab)
@@ -900,24 +1059,30 @@ namespace WindowsSecureBrowser
 
             try
             {
-                // 1. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
+                // 1. Đánh dấu tạm ẩn để chụp ảnh — ngăn IsVisibleChanged trigger DiscardAllWebViewsAsync
+                _isTemporaryHide = true;
+
+                // 2. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
                 WebViewHostGrid.Visibility = Visibility.Hidden;
                 this.WindowState = WindowState.Minimized;
                 this.Hide();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_HIDE);
 
-                // 2. Allow DWM compositor 300ms to completely unmap window surface from desktop composite
+                // 3. Allow DWM compositor 300ms to completely unmap window surface from desktop composite
                 await Task.Delay(300);
 
-                // 3. Trigger regional crop capture overlay (Overlay is protected from screen recorders)
+                // 4. Trigger regional crop capture overlay (Overlay is protected from screen recorders)
                 _screenshotManager.TriggerRegionalCapture();
             }
             finally
             {
-                // 4. STRICT STEALTH: Re-enforce 100% protection FIRST before restoring window visibility!
+                // 5. Reset flag trước khi Show() để tránh bất kỳ trigger nào sau này
+                _isTemporaryHide = false;
+
+                // 6. STRICT STEALTH: Re-enforce 100% protection FIRST before restoring window visibility!
                 WindowProtection.EnableCaptureProtection(this);
 
-                // 5. Unhide main WPF window & restore window state
+                // 7. Unhide main WPF window & restore window state
                 WebViewHostGrid.Visibility = Visibility.Visible;
                 this.Show();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_RESTORE);
@@ -938,24 +1103,30 @@ namespace WindowsSecureBrowser
 
             try
             {
-                // 1. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
+                // 1. Đánh dấu tạm ẩn để chụp ảnh — ngăn IsVisibleChanged trigger DiscardAllWebViewsAsync
+                _isTemporaryHide = true;
+
+                // 2. Hide native WebView2 HWND & minimize/hide main WPF window completely via Win32
                 WebViewHostGrid.Visibility = Visibility.Hidden;
                 this.WindowState = WindowState.Minimized;
                 this.Hide();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_HIDE);
 
-                // 2. Allow DWM compositor 300ms to completely unmap window surface from desktop composite
+                // 3. Allow DWM compositor 300ms to completely unmap window surface from desktop composite
                 await Task.Delay(300);
 
-                // 3. Trigger full screen capture
+                // 4. Trigger full screen capture
                 _screenshotManager.TriggerFullScreenCapture();
             }
             finally
             {
-                // 4. STRICT STEALTH: Re-enforce 100% protection FIRST before restoring window visibility!
+                // 5. Reset flag trước khi Show()
+                _isTemporaryHide = false;
+
+                // 6. STRICT STEALTH: Re-enforce 100% protection FIRST before restoring window visibility!
                 WindowProtection.EnableCaptureProtection(this);
 
-                // 5. Unhide main WPF window & restore window state
+                // 7. Unhide main WPF window & restore window state
                 WebViewHostGrid.Visibility = Visibility.Visible;
                 this.Show();
                 if (hwnd != IntPtr.Zero) ShowWindow(hwnd, SW_RESTORE);
@@ -1525,6 +1696,10 @@ namespace WindowsSecureBrowser
 
                 await _webViewManager.InitializeWebViewAsync(newWebView, env, url, _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
 
+                // STEALTH: Áp dụng WDA_EXCLUDEFROMCAPTURE ngay sau khi WebView2 mới khởi tạo
+                // Proxy change tạo WebView2 mới với HWND mới — protect ngay, không đợi Scanner
+                WindowProtection.EnableCaptureProtection(this);
+
                 // Subscribe to BasicAuthenticationRequested for proxy user:pass
                 newWebView.CoreWebView2.BasicAuthenticationRequested += (sender, args) =>
                 {
@@ -1946,9 +2121,10 @@ namespace WindowsSecureBrowser
             ShowAppNotification("Đã xóa an toàn toàn bộ Cookie, Session Storage, RAM Bitmaps & Cache nhạy cảm!", "Đã Dọn Dẹp Bảo Mật");
         }
 
-        private void UpdateMemoryDisplay()
+        private async void UpdateMemoryDisplay()
         {
-            ResourceManager.OptimizeMemory();
+            // GC chạy trên background thread; sau await tự quay về UI thread — không cần Dispatcher.Invoke
+            await ResourceManager.OptimizeMemoryAsync();
             txtMemoryUsage.Text = $"RAM: {ResourceManager.GetWorkingSetMemoryMB()} MB";
         }
         #endregion

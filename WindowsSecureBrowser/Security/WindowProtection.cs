@@ -73,7 +73,9 @@ namespace WindowsSecureBrowser.Security
                 {
                     try
                     {
-                        await Task.Delay(1000);
+                        // 2000ms: an toàn vì giờ đã có immediate protection khi tạo WebView2 mới.
+                        // Scanner chỉ còn là safety net — không cần tick 1000ms, tiết kiệm ~50% CPU overhead.
+                        await Task.Delay(2000);
                         if (!_isProtectionDisabledTemporarily)
                         {
                             ProtectAllProcessWindows(currentPid);

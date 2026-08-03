@@ -44,7 +44,10 @@ namespace WindowsSecureBrowser.Browser
                 "--no-first-run " +
                 "--safebrowsing-disable-auto-update " +
                 "--enable-features=MemorySaver " +
-                "--js-flags=\"--max-old-space-size=128\"";
+                "--js-flags=\"--max-old-space-size=128\" " +
+                // --- RAM REDUCTION: Cache Limits Only (Safe, Zero UX Impact) ---
+                "--disk-cache-size=52428800 " +            // Giới hạn disk cache = 50MB
+                "--media-cache-size=52428800";
 
             return await CoreWebView2Environment.CreateAsync(null, userDataFolder, options);
         }
