@@ -17,7 +17,7 @@ namespace WindowsSecureBrowser.Privacy
                     {
                         try
                         {
-                            if (tab.WebView != null && tab.WebView.CoreWebView2 != null)
+                            if (tab.WebView != null && !tab.IsDiscarded && !tab.IsRestoring && tab.WebView.CoreWebView2 != null)
                             {
                                 // 1. Delete all Cookies via WebView2 CookieManager
                                 tab.WebView.CoreWebView2.CookieManager.DeleteAllCookies();
@@ -54,7 +54,7 @@ namespace WindowsSecureBrowser.Privacy
 
                     // Reload active tab to reflect session invalidation/logout immediately
                     var activeTab = browserManager.TabManager.ActiveTab;
-                    if (activeTab?.WebView != null && activeTab.WebView.CoreWebView2 != null)
+                    if (activeTab?.WebView != null && !activeTab.IsDiscarded && !activeTab.IsRestoring && activeTab.WebView.CoreWebView2 != null)
                     {
                         activeTab.WebView.Reload();
                     }

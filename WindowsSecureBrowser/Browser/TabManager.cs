@@ -21,6 +21,11 @@ namespace WindowsSecureBrowser.Browser
         /// URL được giữ lại để restore khi cần.
         /// </summary>
         public bool IsDiscarded { get; set; } = false;
+
+        /// <summary>
+        /// True khi WebView2 đang trong quá trình tái tạo lại sau khi bị discard.
+        /// </summary>
+        public bool IsRestoring { get; set; } = false;
     }
 
     public class TabManager

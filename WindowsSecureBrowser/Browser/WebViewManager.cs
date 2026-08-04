@@ -10,25 +10,33 @@ namespace WindowsSecureBrowser.Browser
     {
         public async Task InitializeWebViewAsync(WebView2 webView, CoreWebView2Environment environment, string initialUrl, UserProfile? profile = null, bool isMuted = true)
         {
+            if (webView == null) return;
             webView.DefaultBackgroundColor = System.Drawing.Color.Transparent;
             await webView.EnsureCoreWebView2Async(environment);
             
-            // Default configuration - PRIVACY & STEALTH: Disable status bar hover URL popups
-            webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
-            webView.CoreWebView2.Settings.IsWebMessageEnabled = true;
-            webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
-            webView.CoreWebView2.Settings.IsGeneralAutofillEnabled = true;
-            webView.CoreWebView2.Settings.IsPasswordAutosaveEnabled = true;
-            
-            // AUDIO PRIVACY: Set IsMuted based on app configuration (defaults to true)
-            webView.CoreWebView2.IsMuted = isMuted;
+            // Check if webView.CoreWebView2 is ready
+            if (webView.CoreWebView2 != null)
+            {
+                // Default configuration - PRIVACY & STEALTH: Disable status bar hover URL popups
+                webView.CoreWebView2.Settings.IsStatusBarEnabled = false;
+                webView.CoreWebView2.Settings.IsWebMessageEnabled = true;
+                webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
+                webView.CoreWebView2.Settings.IsGeneralAutofillEnabled = true;
+                webView.CoreWebView2.Settings.IsPasswordAutosaveEnabled = true;
+                
+                // AUDIO PRIVACY: Set IsMuted based on app configuration (defaults to true)
+                webView.CoreWebView2.IsMuted = isMuted;
 
-            webView.Source = new Uri(initialUrl);
+                if (!string.IsNullOrWhiteSpace(initialUrl))
+                {
+                    webView.Source = new Uri(initialUrl);
+                }
+            }
         }
 
         public void Navigate(WebView2 webView, string targetUrl)
         {
-            if (string.IsNullOrWhiteSpace(targetUrl)) return;
+            if (webView == null || webView.CoreWebView2 == null || string.IsNullOrWhiteSpace(targetUrl)) return;
 
             if (!targetUrl.StartsWith("http://") && !targetUrl.StartsWith("https://") && !targetUrl.StartsWith("file://"))
             {

@@ -77,9 +77,11 @@ namespace WindowsSecureBrowser
             {
                 this.ShowInTaskbar = false;
                 HideFromAltTab();
-                if (IsVisible && !WindowProtection.IsProtectionDisabledTemporarily)
+                if (IsVisible)
                 {
-                    WindowProtection.EnableCaptureProtection(this);
+                    if (!WindowProtection.IsProtectionDisabledTemporarily)
+                        WindowProtection.EnableCaptureProtection(this);
+
                     // App hiện lại → restore tab đang active nếu đã bị discard
                     var activeTab = _browserManager.TabManager.ActiveTab;
                     if (activeTab?.IsDiscarded == true)
@@ -750,14 +752,17 @@ namespace WindowsSecureBrowser
             UpdateAllTabStyles();
 
             // Lazy restore: nếu tab bị discard (WebView đã dispose), recreate trước khi hiển thị
-            if (tab.IsDiscarded)
+            if (tab.IsDiscarded || tab.IsRestoring)
             {
                 await RestoreDiscardedTabAsync(tab);
                 return; // RestoreDiscardedTabAsync tự cập nhật visual tree
             }
 
-            WebViewHostGrid.Children.Clear();
-            WebViewHostGrid.Children.Add(tab.WebView);
+            if (tab.WebView != null)
+            {
+                WebViewHostGrid.Children.Clear();
+                WebViewHostGrid.Children.Add(tab.WebView);
+            }
 
             // Background Tab RAM & CPU Optimization: Suspend inactive tabs and set memory level low
             if (_browserManager?.TabManager?.Tabs != null)
@@ -766,7 +771,7 @@ namespace WindowsSecureBrowser
                 {
                     try
                     {
-                        if (t.WebView != null && t.WebView.CoreWebView2 != null)
+                        if (t.WebView != null && !t.IsDiscarded && !t.IsRestoring && t.WebView.CoreWebView2 != null)
                         {
                             if (t == tab)
                             {
@@ -813,6 +818,7 @@ namespace WindowsSecureBrowser
                             tab.WebView = null!;
                         }
                         tab.IsDiscarded = true;
+                        tab.IsRestoring = false;
                     }
                     catch { }
                 }
@@ -833,8 +839,9 @@ namespace WindowsSecureBrowser
         private async Task RestoreDiscardedTabAsync(BrowserTab tab)
         {
             if (tab == null || _activeEnvironment == null) return;
-            if (!tab.IsDiscarded) return;
+            if (!tab.IsDiscarded || tab.IsRestoring) return;
 
+            tab.IsRestoring = true;
             string url = string.IsNullOrWhiteSpace(tab.Url) ? "https://www.google.com" : tab.Url;
             string savedTitle = tab.Title; // Lưu title cũ để restore nếu lỗi
 
@@ -846,48 +853,55 @@ namespace WindowsSecureBrowser
 
                 // Tạo WebView2 mới
                 var newWebView = new Microsoft.Web.WebView2.Wpf.WebView2();
-                tab.WebView = newWebView;
-                tab.IsDiscarded = false;
+
+                // CỰC KỲ QUAN TRỌNG: Đưa vào visual tree TRƯỚC KHI Initialize
+                // để WPF HwndHost tạo HWND native handle đúng chuẩn
+                if (tab == _browserManager.TabManager.ActiveTab)
+                {
+                    WebViewHostGrid.Children.Clear();
+                    WebViewHostGrid.Children.Add(newWebView);
+                }
 
                 // Initialize với environment hiện tại
                 await _webViewManager.InitializeWebViewAsync(newWebView, _activeEnvironment, url,
                     _browserManager.ProfileManager.CurrentProfile, _appSettings?.IsAudioMuted ?? true);
 
+                tab.WebView = newWebView;
+                tab.IsDiscarded = false;
+
                 // STEALTH: Áp dụng WDA_EXCLUDEFROMCAPTURE ngay sau khi WebView2 mới khởi tạo
-                // HWND mới chưa được protect — gọi trước khi đưa vào visual tree
                 WindowProtection.EnableCaptureProtection(this);
 
-                // Đăng ký lại events
-                newWebView.CoreWebView2.SourceChanged += (s, e) =>
+                // Đăng ký lại events (chỉ khi CoreWebView2 đã khởi tạo xong)
+                if (newWebView.CoreWebView2 != null)
                 {
-                    tab.Url = newWebView.Source.ToString();
-                    if (tab == _browserManager.TabManager.ActiveTab)
-                        txtAddressBar.Text = tab.Url;
-                    _browserManager.ProfileManager.AddHistory(tab.Url);
-                };
+                    newWebView.CoreWebView2.SourceChanged += (s, e) =>
+                    {
+                        if (newWebView.Source != null)
+                        {
+                            tab.Url = newWebView.Source.ToString();
+                            if (tab == _browserManager.TabManager.ActiveTab)
+                                txtAddressBar.Text = tab.Url;
+                            _browserManager.ProfileManager.AddHistory(tab.Url);
+                        }
+                    };
 
-                newWebView.CoreWebView2.DocumentTitleChanged += (s, e) =>
-                {
-                    tab.Title = newWebView.CoreWebView2.DocumentTitle;
-                    UpdateTabHeaderUI(tab);
-                };
+                    newWebView.CoreWebView2.DocumentTitleChanged += (s, e) =>
+                    {
+                        if (newWebView.CoreWebView2 != null)
+                        {
+                            tab.Title = newWebView.CoreWebView2.DocumentTitle;
+                            UpdateTabHeaderUI(tab);
+                        }
+                    };
 
-                newWebView.CoreWebView2.NavigationCompleted += (s, e) =>
-                {
-                    ApplyThemeToTab(tab);
-                    try { if (_appSettings != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.01, 3.0); } catch { }
-                };
+                    newWebView.CoreWebView2.NavigationCompleted += (s, e) =>
+                    {
+                        ApplyThemeToTab(tab);
+                        try { if (_appSettings != null && newWebView.CoreWebView2 != null) newWebView.ZoomFactor = Math.Clamp(_appSettings.ZoomFactor, 0.01, 3.0); } catch { }
+                    };
 
-                _browserManager.DownloadManager.RegisterDownloadEvents(newWebView.CoreWebView2);
-
-                // Đưa vào visual tree nếu đây là tab đang active
-                if (tab == _browserManager.TabManager.ActiveTab)
-                {
-                    WebViewHostGrid.Children.Clear();
-                    WebViewHostGrid.Children.Add(newWebView);
-
-                    // STEALTH: Re-apply sau khi đưa vào visual tree (HWND có thể thay đổi sau khi attach)
-                    WindowProtection.EnableCaptureProtection(this);
+                    _browserManager.DownloadManager.RegisterDownloadEvents(newWebView.CoreWebView2);
                 }
 
                 ApplyThemeToTab(tab);
@@ -896,8 +910,12 @@ namespace WindowsSecureBrowser
             {
                 System.Diagnostics.Debug.WriteLine($"[RestoreDiscardedTab] Error: {ex.Message}");
                 tab.Title = savedTitle; // Restore title cũ nếu lỗi
-                tab.IsDiscarded = false;
+                tab.IsDiscarded = true;
                 UpdateTabHeaderUI(tab);
+            }
+            finally
+            {
+                tab.IsRestoring = false;
             }
         }
 
@@ -930,16 +948,31 @@ namespace WindowsSecureBrowser
         #endregion
 
         #region Navigation & Key Shortcuts
-        private void TxtAddressBar_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+        private async Task SafeNavigateActiveTabAsync(string targetUrl, string statusMessage = "")
+        {
+            var active = _browserManager.TabManager.ActiveTab;
+            if (active == null) return;
+
+            if (!string.IsNullOrEmpty(statusMessage))
+                txtStatus.Text = statusMessage;
+
+            active.Url = targetUrl;
+
+            if (active.IsDiscarded || active.IsRestoring || active.WebView == null || active.WebView.CoreWebView2 == null)
+            {
+                await RestoreDiscardedTabAsync(active);
+            }
+            else
+            {
+                _webViewManager.Navigate(active.WebView, targetUrl);
+            }
+        }
+
+        private async void TxtAddressBar_KeyDown(object sender, System.Windows.Input.KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                var active = _browserManager.TabManager.ActiveTab;
-                if (active != null)
-                {
-                    txtStatus.Text = "Đang chuyển trang...";
-                    _webViewManager.Navigate(active.WebView, txtAddressBar.Text);
-                }
+                await SafeNavigateActiveTabAsync(txtAddressBar.Text, "Đang chuyển trang...");
             }
         }
 
@@ -971,7 +1004,7 @@ namespace WindowsSecureBrowser
         private void BtnBack_Click(object sender, RoutedEventArgs e)
         {
             var active = _browserManager.TabManager.ActiveTab;
-            if (active != null && active.WebView.CanGoBack)
+            if (active != null && !active.IsDiscarded && !active.IsRestoring && active.WebView?.CoreWebView2 != null && active.WebView.CanGoBack)
             {
                 txtStatus.Text = "Đang quay lại trang trước...";
                 active.WebView.GoBack();
@@ -981,31 +1014,40 @@ namespace WindowsSecureBrowser
         private void BtnForward_Click(object sender, RoutedEventArgs e)
         {
             var active = _browserManager.TabManager.ActiveTab;
-            if (active != null && active.WebView.CanGoForward)
+            if (active != null && !active.IsDiscarded && !active.IsRestoring && active.WebView?.CoreWebView2 != null && active.WebView.CanGoForward)
             {
                 txtStatus.Text = "Đang tiến tới trang tiếp...";
                 active.WebView.GoForward();
             }
         }
 
-        private void BtnRefresh_Click(object sender, RoutedEventArgs e)
+        private async void BtnRefresh_Click(object sender, RoutedEventArgs e)
         {
             var active = _browserManager.TabManager.ActiveTab;
             if (active != null)
             {
-                txtStatus.Text = "Đang tải lại trang...";
-                active.WebView.Reload();
+                if (active.IsDiscarded || active.IsRestoring || active.WebView == null || active.WebView.CoreWebView2 == null)
+                {
+                    await RestoreDiscardedTabAsync(active);
+                }
+                else
+                {
+                    txtStatus.Text = "Đang tải lại trang...";
+                    try
+                    {
+                        active.WebView.Reload();
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[BtnRefresh] Error: {ex.Message}");
+                    }
+                }
             }
         }
 
-        private void BtnHome_Click(object sender, RoutedEventArgs e)
+        private async void BtnHome_Click(object sender, RoutedEventArgs e)
         {
-            var active = _browserManager.TabManager.ActiveTab;
-            if (active != null)
-            {
-                txtStatus.Text = "Đang về Trang chủ Google...";
-                _webViewManager.Navigate(active.WebView, "https://www.google.com");
-            }
+            await SafeNavigateActiveTabAsync("https://www.google.com", "Đang về Trang chủ Google...");
         }
         #endregion
 
@@ -1197,40 +1239,25 @@ namespace WindowsSecureBrowser
         private void GoogleAccountBadge_MouseDown(object sender, MouseButtonEventArgs e) => ToggleGoogleAccountModal();
         private void BtnCloseGoogleAccountModal_Click(object sender, RoutedEventArgs e) => ToggleGoogleAccountModal();
 
-        private void BtnGoogleSignIn_Click(object sender, RoutedEventArgs e)
+        private async void BtnGoogleSignIn_Click(object sender, RoutedEventArgs e)
         {
             GoogleAccountModal.Visibility = Visibility.Collapsed;
             UpdateModalVisibilities();
-            var active = _browserManager.TabManager.ActiveTab;
-            if (active != null)
-            {
-                txtStatus.Text = "Đang chuyển tới trang Đăng nhập Google...";
-                _webViewManager.Navigate(active.WebView, "https://accounts.google.com/");
-            }
+            await SafeNavigateActiveTabAsync("https://accounts.google.com/", "Đang chuyển tới trang Đăng nhập Google...");
         }
 
-        private void BtnOpenChatGPT_Click(object sender, RoutedEventArgs e)
+        private async void BtnOpenChatGPT_Click(object sender, RoutedEventArgs e)
         {
             GoogleAccountModal.Visibility = Visibility.Collapsed;
             UpdateModalVisibilities();
-            var active = _browserManager.TabManager.ActiveTab;
-            if (active != null)
-            {
-                txtStatus.Text = "Đang mở ChatGPT (https://chatgpt.com/)...";
-                _webViewManager.Navigate(active.WebView, "https://chatgpt.com/");
-            }
+            await SafeNavigateActiveTabAsync("https://chatgpt.com/", "Đang mở ChatGPT (https://chatgpt.com/)...");
         }
 
-        private void BtnOpenGemini_Click(object sender, RoutedEventArgs e)
+        private async void BtnOpenGemini_Click(object sender, RoutedEventArgs e)
         {
             GoogleAccountModal.Visibility = Visibility.Collapsed;
             UpdateModalVisibilities();
-            var active = _browserManager.TabManager.ActiveTab;
-            if (active != null)
-            {
-                txtStatus.Text = "Đang mở Google Gemini (https://gemini.google.com/app)...";
-                _webViewManager.Navigate(active.WebView, "https://gemini.google.com/app");
-            }
+            await SafeNavigateActiveTabAsync("https://gemini.google.com/app", "Đang mở Google Gemini (https://gemini.google.com/app)...");
         }
 
 
@@ -1364,15 +1391,11 @@ namespace WindowsSecureBrowser
                     FontSize = 11,
                     Margin = new Thickness(0, 0, 4, 0)
                 };
-                btnNav.Click += (s, e) =>
+                btnNav.Click += async (s, e) =>
                 {
                     BookmarksModal.Visibility = Visibility.Collapsed;
                     UpdateModalVisibilities();
-                    var active = _browserManager.TabManager.ActiveTab;
-                    if (active != null)
-                    {
-                        _webViewManager.Navigate(active.WebView, currentUrl);
-                    }
+                    await SafeNavigateActiveTabAsync(currentUrl);
                 };
 
                 dock.Children.Add(btnDelete);
@@ -1957,7 +1980,7 @@ namespace WindowsSecureBrowser
                 {
                     try
                     {
-                        if (tab.WebView != null)
+                        if (tab.WebView != null && !tab.IsDiscarded && !tab.IsRestoring && tab.WebView.CoreWebView2 != null)
                         {
                             tab.WebView.ZoomFactor = Math.Clamp(zoom, 0.01, 3.0);
                         }
@@ -2001,7 +2024,7 @@ namespace WindowsSecureBrowser
                 {
                     try
                     {
-                        if (tab.WebView != null && tab.WebView.CoreWebView2 != null)
+                        if (tab.WebView != null && !tab.IsDiscarded && !tab.IsRestoring && tab.WebView.CoreWebView2 != null)
                         {
                             tab.WebView.CoreWebView2.IsMuted = isMuted;
                         }
