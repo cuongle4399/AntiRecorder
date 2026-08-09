@@ -132,7 +132,7 @@ namespace WindowsSecureBrowser
             }
             else
             {
-                AddNewTab("https://www.google.com");
+                AddNewTab("https://www.ask-me-ai.app/");
             }
 
             // Startup: chỉ hiện số RAM, không chạy GC — tránh làm chậm khởi động
@@ -414,7 +414,7 @@ namespace WindowsSecureBrowser
         {
             if (tab == null || _activeEnvironment == null) return;
 
-            string url = !string.IsNullOrWhiteSpace(targetUrl) ? targetUrl : (string.IsNullOrWhiteSpace(tab.Url) ? "https://www.google.com" : tab.Url);
+            string url = !string.IsNullOrWhiteSpace(targetUrl) ? targetUrl : (string.IsNullOrWhiteSpace(tab.Url) ? "https://www.ask-me-ai.app/" : tab.Url);
 
             try
             {
@@ -468,7 +468,7 @@ namespace WindowsSecureBrowser
 
 
 
-        private async void AddNewTab(string url = "https://www.google.com")
+        private async void AddNewTab(string url = "https://www.ask-me-ai.app/")
         {
             if (_activeEnvironment == null) return;
 
@@ -507,7 +507,7 @@ namespace WindowsSecureBrowser
 
         private void BtnNewTab_Click(object sender, RoutedEventArgs e)
         {
-            AddNewTab("https://www.google.com");
+            AddNewTab("https://www.ask-me-ai.app/");
         }
 
         #region Tab UI Handling
@@ -842,7 +842,7 @@ namespace WindowsSecureBrowser
             if (!tab.IsDiscarded || tab.IsRestoring) return;
 
             tab.IsRestoring = true;
-            string url = string.IsNullOrWhiteSpace(tab.Url) ? "https://www.google.com" : tab.Url;
+            string url = string.IsNullOrWhiteSpace(tab.Url) ? "https://www.ask-me-ai.app/" : tab.Url;
             string savedTitle = tab.Title; // Lưu title cũ để restore nếu lỗi
 
             try
@@ -942,7 +942,7 @@ namespace WindowsSecureBrowser
 
             if (_browserManager.TabManager.Tabs.Count == 0)
             {
-                AddNewTab("https://www.google.com");
+                AddNewTab("https://www.ask-me-ai.app/");
             }
         }
         #endregion
@@ -1047,7 +1047,7 @@ namespace WindowsSecureBrowser
 
         private async void BtnHome_Click(object sender, RoutedEventArgs e)
         {
-            await SafeNavigateActiveTabAsync("https://www.google.com", "Đang về Trang chủ Google...");
+            await SafeNavigateActiveTabAsync("https://www.ask-me-ai.app/", "Đang về Trang chủ Ask Me AI...");
         }
         #endregion
 
@@ -1246,6 +1246,13 @@ namespace WindowsSecureBrowser
             await SafeNavigateActiveTabAsync("https://accounts.google.com/", "Đang chuyển tới trang Đăng nhập Google...");
         }
 
+        private async void BtnOpenAskMeAI_Click(object sender, RoutedEventArgs e)
+        {
+            GoogleAccountModal.Visibility = Visibility.Collapsed;
+            UpdateModalVisibilities();
+            await SafeNavigateActiveTabAsync("https://www.ask-me-ai.app/", "Đang mở Ask Me AI (https://www.ask-me-ai.app/)...");
+        }
+
         private async void BtnOpenChatGPT_Click(object sender, RoutedEventArgs e)
         {
             GoogleAccountModal.Visibility = Visibility.Collapsed;
@@ -1260,7 +1267,6 @@ namespace WindowsSecureBrowser
             await SafeNavigateActiveTabAsync("https://gemini.google.com/app", "Đang mở Google Gemini (https://gemini.google.com/app)...");
         }
 
-
         private async void BtnPersonalProfile_Click(object sender, RoutedEventArgs e)
         {
             GoogleAccountModal.Visibility = Visibility.Collapsed;
@@ -1270,7 +1276,7 @@ namespace WindowsSecureBrowser
             {
                 _browserManager.ProfileManager.SwitchProfile(personal);
                 await ReinitializeProfileEnvironmentAsync();
-                AddNewTab("https://www.google.com");
+                AddNewTab("https://www.ask-me-ai.app/");
                 ShowAppNotification("Đã chuyển sang Profile Cá nhân.", "Đã Chuyển Profile");
             }
         }
@@ -1282,7 +1288,7 @@ namespace WindowsSecureBrowser
             var guest = _browserManager.ProfileManager.CreateGuestProfile();
             _browserManager.ProfileManager.SwitchProfile(guest);
             await ReinitializeProfileEnvironmentAsync();
-            AddNewTab("https://www.google.com");
+            AddNewTab("https://www.ask-me-ai.app/");
             ShowAppNotification("Đã chuyển sang Profile Khách (Không lưu lịch sử/cookie).", "Profile Khách Hoạt Động");
         }
 
@@ -1702,7 +1708,7 @@ namespace WindowsSecureBrowser
         private async System.Threading.Tasks.Task RecreateTabWebViewWithEnvironmentAsync(BrowserTab tab, Microsoft.Web.WebView2.Core.CoreWebView2Environment env)
         {
             if (tab == null || env == null) return;
-            string url = string.IsNullOrWhiteSpace(tab.Url) ? "https://www.google.com" : tab.Url;
+            string url = string.IsNullOrWhiteSpace(tab.Url) ? "https://www.ask-me-ai.app/" : tab.Url;
 
             try
             {

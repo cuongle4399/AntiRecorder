@@ -10,7 +10,7 @@ namespace WindowsSecureBrowser.Browser
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
         public string Title { get; set; } = "New Tab";
-        public string Url { get; set; } = "https://www.google.com";
+        public string Url { get; set; } = "https://www.ask-me-ai.app/";
         public WebView2 WebView { get; set; } = null!;
         public bool IsActive { get; set; }
         public ProxyModel Proxy { get; set; } = new ProxyModel();
@@ -37,7 +37,7 @@ namespace WindowsSecureBrowser.Browser
         public event EventHandler<BrowserTab>? TabClosed;
         public event EventHandler<BrowserTab>? TabSelected;
 
-        public BrowserTab CreateTab(string url = "https://www.google.com")
+        public BrowserTab CreateTab(string url = "https://www.ask-me-ai.app/")
         {
             var webView = new WebView2();
             var tab = new BrowserTab

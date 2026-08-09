@@ -136,12 +136,12 @@
                     <Button Content="&#xE72B;" Click="BtnBack_Click" ToolTip="Quay lại (Back)" Width="32" Height="32" Margin="0,0,3,0" FontFamily="Segoe MDL2 Assets" FontSize="13" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
                     <Button x:Name="btnForward" Content="&#xE72A;" Click="BtnForward_Click" ToolTip="Tiến tới (Forward)" Width="32" Height="32" Margin="0,0,3,0" FontFamily="Segoe MDL2 Assets" FontSize="13" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
                     <Button Content="&#xE72C;" Click="BtnRefresh_Click" ToolTip="Tải lại trang (Refresh)" Width="32" Height="32" Margin="0,0,3,0" FontFamily="Segoe MDL2 Assets" FontSize="13" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
-                    <Button x:Name="btnHome" Content="&#xE80F;" Click="BtnHome_Click" ToolTip="Trang chủ Google (Home)" Width="32" Height="32" Margin="0,0,6,0" FontFamily="Segoe MDL2 Assets" FontSize="13" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
+                    <Button x:Name="btnHome" Content="&#xE80F;" Click="BtnHome_Click" ToolTip="Trang chủ (Ask Me AI)" Width="32" Height="32" Margin="0,0,6,0" FontFamily="Segoe MDL2 Assets" FontSize="13" Padding="0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center"/>
                 </StackPanel>
 
                 <!-- URL Address Box -->
                 <TextBox x:Name="txtAddressBar" Grid.Column="1" Style="{StaticResource UrlBoxStyle}"
-                         KeyDown="TxtAddressBar_KeyDown" Text="https://www.google.com"/>
+                         KeyDown="TxtAddressBar_KeyDown" Text="https://www.ask-me-ai.app/"/>
 
                 <!-- Action Tools (Drag Handle & Menu Button) -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="4,0,0,0" VerticalAlignment="Center">
@@ -228,16 +228,17 @@
 
         <!-- 6. Google Account & Profile Manager Modal -->
         <Border Grid.Row="2" x:Name="GoogleAccountModal" Visibility="Collapsed"
-                HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="330" Margin="6"
+                HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="350" Margin="6"
                 BorderThickness="1" CornerRadius="8" Padding="12" Canvas.ZIndex="100">
             <StackPanel>
                 <DockPanel Margin="0,0,0,8">
                     <Button Content="✕" DockPanel.Dock="Right" Click="BtnCloseGoogleAccountModal_Click" Width="22" Height="22" Padding="0" FontSize="11" ToolTip="Đóng"/>
-                    <TextBlock Text="👤 Tài Khoản Google &amp; Profile" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
+                    <TextBlock Text="👤 Tài Khoản &amp; Profile AI" FontSize="14" FontWeight="Bold" VerticalAlignment="Center"/>
                 </DockPanel>
 
-                <UniformGrid Columns="3" Margin="0,0,0,6">
-                    <Button Content="Google" Click="BtnGoogleSignIn_Click" Margin="0,0,2,0" Padding="4,4" FontSize="11"/>
+                <UniformGrid Columns="4" Margin="0,0,0,6">
+                    <Button Content="Ask Me AI" Click="BtnOpenAskMeAI_Click" Margin="0,0,2,0" Padding="4,4" FontSize="11"/>
+                    <Button Content="Google" Click="BtnGoogleSignIn_Click" Margin="2,0,2,0" Padding="4,4" FontSize="11"/>
                     <Button Content="ChatGPT" Click="BtnOpenChatGPT_Click" Margin="2,0,2,0" Padding="4,4" FontSize="11"/>
                     <Button Content="Gemini" Click="BtnOpenGemini_Click" Margin="2,0,0,0" Padding="4,4" FontSize="11"/>
                 </UniformGrid>
