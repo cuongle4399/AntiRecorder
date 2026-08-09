@@ -81,7 +81,7 @@ namespace WindowsSecureBrowser.Security
                     }
                 }
 
-                if ((isPrintScreen || isWinShiftS) && _targetWindow != null)
+                if ((isPrintScreen || isWinShiftS) && _targetWindow != null && WindowProtection.CurrentMode == ProtectionMode.AllowOSCapture)
                 {
                     TemporarilyDisableProtectionForOSCapture();
                 }

@@ -268,12 +268,17 @@ namespace WindowsSecureBrowser
         {
             if (msg == WM_SETCURSOR)
             {
-                IntPtr hArrow = LoadCursor(IntPtr.Zero, IDC_ARROW);
-                if (hArrow != IntPtr.Zero)
+                int hitTest = lParam.ToInt32() & 0xFFFF;
+                // Only override arrow cursor for HTCLIENT (1). Allow Windows OS to display resize cursors (HTLEFT, HTRIGHT, etc.)
+                if (hitTest == 1)
                 {
-                    SetCursor(hArrow);
-                    handled = true;
-                    return new IntPtr(1);
+                    IntPtr hArrow = LoadCursor(IntPtr.Zero, IDC_ARROW);
+                    if (hArrow != IntPtr.Zero)
+                    {
+                        SetCursor(hArrow);
+                        handled = true;
+                        return new IntPtr(1);
+                    }
                 }
             }
 
@@ -286,8 +291,8 @@ namespace WindowsSecureBrowser
 
             if (msg == WM_NCHITTEST && WindowState != WindowState.Maximized)
             {
-                int cornerSize = 10;
-                int borderSize = 6;
+                int cornerSize = 14;
+                int borderSize = 8;
 
                 int x = (short)(lParam.ToInt32() & 0xFFFF);
                 int y = (short)((lParam.ToInt32() >> 16) & 0xFFFF);

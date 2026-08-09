@@ -10,9 +10,9 @@ namespace WindowsSecureBrowser.Security
 {
     public enum ProtectionMode
     {
-        FullStealth = 0,     // 100% Permanent Black / Hidden on Screen Recorders
-        AllowOSCapture = 0,
-        Disabled = 0
+        FullStealth = 0,     // 100% Permanent Black / Hidden on Screen Recorders & Snipping Tools
+        AllowOSCapture = 1,
+        Disabled = 2
     }
 
     public class WindowProtection
@@ -21,13 +21,23 @@ namespace WindowsSecureBrowser.Security
         private static bool _isProtectionDisabledTemporarily = false;
         private static bool _isBackgroundScannerStarted = false;
 
+        private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SetWinEventHook(uint eventMin, uint eventMax, IntPtr hmodWinEventProc, WinEventDelegate lpfnWinEventProc, uint idProcess, uint idThread, uint dwFlags);
+
+        private const uint EVENT_OBJECT_SHOW = 0x8002;
+        private const uint WINEVENT_OUTOFCONTEXT = 0x0000;
+        private static WinEventDelegate? _winEventDelegate;
+        private static IntPtr _winEventHook = IntPtr.Zero;
+
         public static bool IsProtectionDisabledTemporarily => _isProtectionDisabledTemporarily;
 
         public static bool ApplyProtection(Window window, ProtectionMode mode = ProtectionMode.FullStealth)
         {
             if (_isProtectionDisabledTemporarily) return false;
 
-            CurrentMode = ProtectionMode.FullStealth;
+            CurrentMode = mode;
             IntPtr hwnd = new WindowInteropHelper(window).Handle;
             if (hwnd == IntPtr.Zero) return false;
 
@@ -58,7 +68,32 @@ namespace WindowsSecureBrowser.Security
                 ApplyProtection(window, ProtectionMode.FullStealth);
             }
 
+            RegisterWinEventHook();
             StartProcessWideStealthScanner();
+        }
+
+        private static void RegisterWinEventHook()
+        {
+            if (_winEventHook != IntPtr.Zero) return;
+            try
+            {
+                uint pid = (uint)Process.GetCurrentProcess().Id;
+                _winEventDelegate = new WinEventDelegate(WinEventProc);
+                _winEventHook = SetWinEventHook(EVENT_OBJECT_SHOW, EVENT_OBJECT_SHOW, IntPtr.Zero, _winEventDelegate, pid, 0, WINEVENT_OUTOFCONTEXT);
+            }
+            catch { }
+        }
+
+        private static void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
+        {
+            if (hwnd != IntPtr.Zero && !_isProtectionDisabledTemporarily)
+            {
+                try
+                {
+                    SecurityCoreWrapper.SetWindowProtection(hwnd, true);
+                }
+                catch { }
+            }
         }
 
         private static void StartProcessWideStealthScanner()
